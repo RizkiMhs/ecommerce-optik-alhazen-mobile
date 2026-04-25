@@ -3,6 +3,7 @@ import 'package:optik_alhazen_app/screens/add_address_screen.dart';
 import '../widgets/alhazen_appbar.dart';
 import '../services/address_service.dart';
 import '../services/order_service.dart';
+import '../services/biteship_service.dart'; // 💡 Import service baru
 import 'package:url_launcher/url_launcher.dart'; // 💡 Tambahkan ini
 
 import 'package:optik_alhazen_app/screens/payment_screen.dart'; // Import layar pembayaran baru
@@ -59,6 +60,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     fetchUserAddress();
   }
 
+  // 💡 KEMBALI MENGGUNAKAN RAJAONGKIR UNTUK MENGHEMAT BIAYA TESTING
   void fetchUserAddress() async {
     final addresses = await AddressService.getAddresses();
 
@@ -75,6 +77,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
 
       if (mainAddress != null) {
+        // Kembali gunakan city_id untuk RajaOngkir
         String cityId = mainAddress!['city_id'].toString();
         fetchOngkir(cityId);
       } else {
@@ -83,7 +86,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  void fetchOngkir(String cityId) async {
+  // 💡 KEMBALI MENGGUNAKAN RAJAONGKIR
+ void fetchOngkir(String cityId) async {
     setState(() {
       isLoadingShipping = true;
     });
@@ -94,8 +98,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() {
         if (result != null && result['status'] == 'success') {
           ongkosKirim = double.parse(result['shipping_cost'].toString());
-          namaKurir = result['courier'];
-          estimasiWaktu = result['etd'];
+          
+          // 💡 Hapus trik sulap, tampilkan nama aslinya (JNE REG)
+          namaKurir = result['courier']; 
+          
+          estimasiWaktu = result['etd'] ?? "2-3";
         } else {
           namaKurir = "Gagal memuat ongkos kirim";
           ongkosKirim = 0;
@@ -650,12 +657,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         setState(() => isSubmitting = true);
 
                         // 1. Tembak API Checkout Laravel
-                        final result = await OrderService.submitOrder(
-                          shippingCost: ongkosKirim,
-                          courier: namaKurir,
-                          paymentMethod: selectedPaymentMethod,
-                          addressData: mainAddress!,
-                        );
+                        // 1. Tembak API Checkout Laravel
+                      final result = await OrderService.submitOrder(
+                        shippingCost: ongkosKirim,
+                        // 💡 PASTIKAN DIKIRIM SEBAGAI 'jne' AGAR DIKENALI BITESHIP
+                        courier: "jne", 
+                        paymentMethod: selectedPaymentMethod,
+                        addressData: mainAddress!,
+                      );
 
                         setState(() => isSubmitting = false);
 

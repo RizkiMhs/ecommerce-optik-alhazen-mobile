@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/order_service.dart';
@@ -57,10 +55,9 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4, // 💡 UBAH 1: Panjang tab diganti dari 3 menjadi 4
       child: Scaffold(
-        backgroundColor: const Color(
-            0xFFF8F9FA), // Warna background abu-abu sangat muda (modern)
+        backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
           title: const Text("Pesanan Saya",
               style: TextStyle(
@@ -68,14 +65,17 @@ class _OrderScreenState extends State<OrderScreen> {
                   fontSize: 18,
                   fontWeight: FontWeight.bold)),
           backgroundColor: Colors.white,
-          elevation: 0.5, // Shadow sangat tipis untuk AppBar
+          elevation: 0.5,
           shadowColor: Colors.black26,
           automaticallyImplyLeading: false,
           bottom: const TabBar(
+            // 💡 OPSIONAL: Tambahkan isScrollable jika teks tab terlalu berdempetan di layar HP kecil
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             labelColor: Color(0xFF3F51B5),
             unselectedLabelColor: Colors.grey,
             indicatorColor: Color(0xFF3F51B5),
-            indicatorWeight: 3, // Garis indikator sedikit ditebalkan
+            indicatorWeight: 3,
             labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             unselectedLabelStyle:
                 TextStyle(fontWeight: FontWeight.normal, fontSize: 13),
@@ -83,6 +83,7 @@ class _OrderScreenState extends State<OrderScreen> {
               Tab(text: "Belum Bayar"),
               Tab(text: "Diproses"),
               Tab(text: "Dikirim"),
+              Tab(text: "Selesai"), // 💡 UBAH 2: Tambahkan Judul Tab ke-4
             ],
           ),
         ),
@@ -91,10 +92,13 @@ class _OrderScreenState extends State<OrderScreen> {
                 child: CircularProgressIndicator(color: Color(0xFF3F51B5)))
             : TabBarView(
                 children: [
-                  // 💡 UPDATE: Kita kirimkan array (List) status
-                  _buildOrderList(['unpaid']),                  // Tab 1
-                  _buildOrderList(['paid', 'processing']),      // Tab 2
-                  _buildOrderList(['shipping', 'completed']),   // Tab 3
+                  _buildOrderList(['unpaid']), // Tab 1: Belum Bayar
+                  _buildOrderList(['paid', 'processing']), // Tab 2: Diproses
+                  _buildOrderList([
+                    'shipping'
+                  ]), // 💡 UBAH 3: Tab 3 sekarang khusus 'shipping' saja
+                  _buildOrderList(
+                      ['completed']), // 💡 UBAH 4: Tab 4 khusus 'completed'
                 ],
               ),
       ),
@@ -126,7 +130,7 @@ class _OrderScreenState extends State<OrderScreen> {
   Widget _buildOrderList(List<String> statusFilters) {
     final filteredOrders = allOrders.where((order) {
       String dbStatus = order['status'];
-      
+
       // 1. Cek apakah status dari database ada di dalam daftar filter Tab ini
       bool isMatch = statusFilters.contains(dbStatus);
 
@@ -153,7 +157,8 @@ class _OrderScreenState extends State<OrderScreen> {
       color: const Color(0xFF3F51B5),
       onRefresh: _loadOrders,
       child: ListView.builder(
-        padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 100),
+        padding:
+            const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 100),
         itemCount: filteredOrders.length,
         itemBuilder: (context, index) {
           final order = filteredOrders[index];
@@ -175,7 +180,8 @@ class _OrderScreenState extends State<OrderScreen> {
             case 'paid':
               badgeColor = Colors.orange.shade50;
               badgeTextColor = Colors.orange.shade700;
-              badgeText = "Menunggu Konfirmasi"; // Baru bayar, admin belum proses
+              badgeText =
+                  "Menunggu Konfirmasi"; // Baru bayar, admin belum proses
               break;
             case 'processing':
               badgeColor = Colors.blue.shade50;
@@ -233,14 +239,18 @@ class _OrderScreenState extends State<OrderScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.shopping_bag_outlined, size: 18, color: Colors.grey[600]),
+                            Icon(Icons.shopping_bag_outlined,
+                                size: 18, color: Colors.grey[600]),
                             const SizedBox(width: 6),
-                            Text(order['created_at'].toString().substring(0, 10),
-                                style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                            Text(
+                                order['created_at'].toString().substring(0, 10),
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 13)),
                           ],
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: badgeColor,
                             borderRadius: BorderRadius.circular(20),
@@ -255,12 +265,12 @@ class _OrderScreenState extends State<OrderScreen> {
                         )
                       ],
                     ),
-            
+
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 12),
                       child: Divider(height: 1, color: Color(0xFFEEEEEE)),
                     ),
-            
+
                     // --- BODY CARD (PRODUK) ---
                     if (firstItem != null && firstItem['product'] != null)
                       Row(
@@ -269,14 +279,19 @@ class _OrderScreenState extends State<OrderScreen> {
                           ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: (firstItem['product']['image_url'] != null &&
-                                    firstItem['product']['image_url'].toString().isNotEmpty)
+                                    firstItem['product']['image_url']
+                                        .toString()
+                                        .isNotEmpty)
                                 ? Image.network(
                                     firstItem['product']['image_url'],
                                     width: 60,
                                     height: 60,
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
-                                    loadingBuilder: (context, child, loadingProgress) {
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            _buildPlaceholder(),
+                                    loadingBuilder:
+                                        (context, child, loadingProgress) {
                                       if (loadingProgress == null) return child;
                                       return _buildPlaceholder();
                                     },
@@ -299,15 +314,16 @@ class _OrderScreenState extends State<OrderScreen> {
                                 if (items.length > 1)
                                   Text("+ ${items.length - 1} produk lainnya",
                                       style: TextStyle(
-                                          color: Colors.grey[600], fontSize: 12)),
+                                          color: Colors.grey[600],
+                                          fontSize: 12)),
                               ],
                             ),
                           ),
                         ],
                       ),
-            
+
                     const SizedBox(height: 16),
-            
+
                     // --- FOOTER CARD (TOTAL & TOMBOL) ---
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -317,16 +333,18 @@ class _OrderScreenState extends State<OrderScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("Total Belanja",
-                                style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                                style: TextStyle(
+                                    color: Colors.grey[600], fontSize: 12)),
                             const SizedBox(height: 2),
                             Text(formatRupiah(order['total_amount']),
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold, fontSize: 15)),
                           ],
                         ),
-                        
+
                         // 💡 Tombol Bayar HANYA muncul jika status benar-benar 'unpaid'
-                        if (currentStatus == "unpaid" && order['payment_token'] != null)
+                        if (currentStatus == "unpaid" &&
+                            order['payment_token'] != null)
                           SizedBox(
                             height: 36,
                             child: ElevatedButton(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../widgets/alhazen_appbar.dart';
 import 'payment_screen.dart'; // 💡 IMPORT BARU: Untuk navigasi ke Midtrans
+import 'tracking_screen.dart'; // 💡 IMPORT BARU: Untuk halaman pelacakan
 
 class OrderDetailScreen extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -113,6 +114,7 @@ class OrderDetailScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold, fontSize: 14)),
 
                   // Munculkan No Resi Jika Ada
+                  // Munculkan No Resi Jika Ada
                   if (order['tracking_number'] != null &&
                       order['tracking_number'].toString().isNotEmpty) ...[
                     const Divider(height: 24),
@@ -125,6 +127,35 @@ class OrderDetailScreen extends StatelessWidget {
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                             color: Color(0xFF3F51B5))),
+
+                    // 💡 KODE BARU: TOMBOL LACAK PESANAN
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TrackingScreen(
+                                orderId: order['id'].toString(),
+                                trackingNumber: order['tracking_number'],
+                                courierName: order['courier'] ?? 'Kurir',
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.location_on_outlined, size: 18),
+                        label: const Text("Lacak Perjalanan Paket"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF3F51B5),
+                          side: const BorderSide(color: Color(0xFF3F51B5)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
                   ]
                 ],
               ),

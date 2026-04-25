@@ -5,7 +5,8 @@ import '../config/api_config.dart';
 
 class OrderService {
   // --- Fungsi Cek Ongkir ---
-  static Future<Map<String, dynamic>?> checkOngkir(String destinationCityId) async {
+  static Future<Map<String, dynamic>?> checkOngkir(
+      String destinationCityId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
 
@@ -37,7 +38,6 @@ class OrderService {
     }
   }
 
-
   // 💡 FUNGSI BARU: Mengirim data Checkout ke Laravel
   static Future<Map<String, dynamic>> submitOrder({
     required double shippingCost,
@@ -52,10 +52,11 @@ class OrderService {
     final requestBody = {
       "shipping_cost": shippingCost,
       "courier": courier,
-      "payment_method": paymentMethod, 
+      "payment_method": paymentMethod,
       "recipient_name": addressData['recipient_name'],
       "phone": addressData['phone'],
-      "full_address": "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
+      "full_address":
+          "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
     };
 
     // 💡 2. CETAK KE CONSOLE FLUTTER
@@ -74,10 +75,12 @@ class OrderService {
         body: jsonEncode({
           "shipping_cost": shippingCost,
           "courier": courier,
-          "payment_method": paymentMethod, // Jika di Laravel belum ada tangkapan ini, tambahkan ya
+          "payment_method":
+              paymentMethod, // Jika di Laravel belum ada tangkapan ini, tambahkan ya
           "recipient_name": addressData['recipient_name'],
           "phone": addressData['phone'],
-          "full_address": "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
+          "full_address":
+              "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
         }),
       );
 
@@ -87,7 +90,6 @@ class OrderService {
       return {'status': 'error', 'message': 'Terjadi kesalahan jaringan'};
     }
   }
-
 
   // 💡 FUNGSI BARU: Mengambil daftar pesanan dari Laravel
   static Future<List<dynamic>> fetchOrders() async {
@@ -112,6 +114,45 @@ class OrderService {
       }
     } catch (e) {
       print("Error fetch orders: $e");
+      return [];
+    }
+  }
+
+  // 💡 FUNGSI BARU: Melacak Resi via Laravel
+  // 💡 FUNGSI BARU: Melacak Resi via Laravel
+  static Future<List<dynamic>> trackOrder(String orderId) async {
+    // 1. Ambil token dari SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    // 2. Gunakan ApiConfig.baseUrl agar seragam
+    final url = Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/tracking');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          // 3. Tambahkan header Authorization
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // 💡 TAMBAHKAN BARIS INI UNTUK MELIHAT ISI ASLI DARI LARAVEL/BITESHIP
+        print("🚨 DEBUG TRACKING RAW: ${response.body}");
+
+        final result = jsonDecode(response.body);
+        if (result['status'] == 'success') {
+          return result['data']['history'] ?? [];
+        }
+      } else {
+        print("Gagal melacak resi: ${response.body}");
+      }
+      return []; // Kembalikan list kosong jika gagal
+    } catch (e) {
+      print("🚨 ERROR TRACKING: $e");
       return [];
     }
   }

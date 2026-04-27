@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // 💡 IMPORT BARU UNTUK FORMAT HARGA
 import 'package:optik_alhazen_app/screens/add_address_screen.dart';
 import '../widgets/alhazen_appbar.dart';
 import '../services/address_service.dart';
 import '../services/order_service.dart';
-import '../services/biteship_service.dart'; // 💡 Import service baru
-import 'package:url_launcher/url_launcher.dart'; // 💡 Tambahkan ini
+import '../services/biteship_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import 'package:optik_alhazen_app/screens/payment_screen.dart'; // Import layar pembayaran baru
+import 'package:optik_alhazen_app/screens/payment_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final List<dynamic> selectedItems;
@@ -27,10 +28,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // State Alamat
   Map<String, dynamic>? mainAddress;
   bool isLoadingAddress = true;
-  bool isSubmitting = false; // Untuk animasi loading tombol Buat Pesanan
+  bool isSubmitting = false;
 
-  // 💡 STATE BARU: Metode Pembayaran
-  String selectedPaymentMethod = "QRIS"; // Default pembayaran
+  // STATE BARU: Metode Pembayaran
+  String selectedPaymentMethod = "QRIS";
   final List<Map<String, dynamic>> paymentOptions = [
     {
       "name": "QRIS",
@@ -60,7 +61,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     fetchUserAddress();
   }
 
-  // 💡 KEMBALI MENGGUNAKAN RAJAONGKIR UNTUK MENGHEMAT BIAYA TESTING
   void fetchUserAddress() async {
     final addresses = await AddressService.getAddresses();
 
@@ -77,7 +77,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       });
 
       if (mainAddress != null) {
-        // Kembali gunakan city_id untuk RajaOngkir
         String cityId = mainAddress!['city_id'].toString();
         fetchOngkir(cityId);
       } else {
@@ -86,8 +85,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  // 💡 KEMBALI MENGGUNAKAN RAJAONGKIR
- void fetchOngkir(String cityId) async {
+  void fetchOngkir(String cityId) async {
     setState(() {
       isLoadingShipping = true;
     });
@@ -98,10 +96,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       setState(() {
         if (result != null && result['status'] == 'success') {
           ongkosKirim = double.parse(result['shipping_cost'].toString());
-          
-          // 💡 Hapus trik sulap, tampilkan nama aslinya (JNE REG)
-          namaKurir = result['courier']; 
-          
+
+          namaKurir = result['courier'];
+
           estimasiWaktu = result['etd'] ?? "2-3";
         } else {
           namaKurir = "Gagal memuat ongkos kirim";
@@ -112,7 +109,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  // 💡 FUNGSI BARU: Memunculkan Pop-up Pemilihan Pembayaran
   void _showPaymentMethodSheet() {
     showModalBottomSheet(
         context: context,
@@ -153,6 +149,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         });
   }
 
+  // 💡 FUNGSI BARU: Untuk mengubah angka mentah menjadi format Rupiah rapi
+  String formatRupiah(dynamic amount) {
+    double parsedAmount = double.tryParse(amount.toString()) ?? 0;
+    return NumberFormat.currency(
+            locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+        .format(parsedAmount);
+  }
+
   @override
   Widget build(BuildContext context) {
     double subtotalProduk = widget.selectedItems.fold(0, (sum, item) {
@@ -174,10 +178,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const SizedBox(height: 8),
           _buildOrderItemsSection(),
           const SizedBox(height: 8),
-          // 💡 SEKSI BARU: Detail Resep (Terpisah dari daftar barang)
           _buildPrescriptionSection(),
           const SizedBox(height: 8),
-          _buildPaymentMethodSection(), // 💡 SEKSI PEMBAYARAN DITAMBAHKAN DI SINI
+          _buildPaymentMethodSection(),
           const SizedBox(height: 8),
           _buildPaymentSummarySection(subtotalProduk),
         ],
@@ -286,7 +289,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             double totalPrice = basePrice + lensPrice;
             final String? imageUrl = productData['image_url'];
 
-            // 💡 Asumsi key resep dari backend. Sesuaikan 'prescription' dengan key JSON Anda.
             final resep = item['prescription'];
 
             return Padding(
@@ -321,7 +323,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 fontWeight: FontWeight.bold, fontSize: 14),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis),
-
                         if (item['lens_type'] != null)
                           Padding(
                             padding: const EdgeInsets.only(top: 4.0),
@@ -330,8 +331,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 style: TextStyle(
                                     fontSize: 12, color: Colors.grey[600])),
                           ),
-
-                        // 💡 BLOK TAMPILAN RESEP
                         if (resep != null)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
@@ -357,10 +356,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                // Menampilkan data resep. Sesuaikan jika bentuknya Map (Kanan/Kiri)
                                 Text(
-                                  resep
-                                      .toString(), // Jika resep berbentuk text string panjang
+                                  resep.toString(),
                                   style: TextStyle(
                                       fontSize: 11,
                                       color: Colors.grey[700],
@@ -369,12 +366,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               ],
                             ),
                           ),
-
                         const SizedBox(height: 12),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text("Rp ${totalPrice.toStringAsFixed(0)}",
+                            // 💡 FORMAT RUPIAH DITERAPKAN DI SINI
+                            Text(formatRupiah(totalPrice),
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF3F51B5),
@@ -397,9 +394,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // 💡 WIDGET BARU: Seksi Khusus Resep Mata
   Widget _buildPrescriptionSection() {
-    // 1. Saring item yang benar-benar memiliki data resep
     final itemsWithPrescription = widget.selectedItems.where((item) {
       return item['sph_right'] != null ||
           item['sph_left'] != null ||
@@ -409,10 +404,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           item['note'] != null;
     }).toList();
 
-    // 2. Jika tidak ada yang pakai resep, kembalikan widget kosong (Sembunyikan)
     if (itemsWithPrescription.isEmpty) return const SizedBox.shrink();
 
-    // 3. Jika ada, tampilkan seksinya
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(16),
@@ -429,8 +422,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
           const SizedBox(height: 12),
-
-          // Looping untuk setiap kacamata yang ada resepnya
           ...itemsWithPrescription.map((item) {
             final productName = item['product']['name'] ?? 'Kacamata';
 
@@ -445,7 +436,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nama Produk agar tahu ini resep untuk kacamata yang mana
                   Text("Untuk: $productName",
                       style: const TextStyle(
                           fontWeight: FontWeight.bold,
@@ -453,7 +443,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           color: Color(0xFF3F51B5))),
                   const Divider(
                       height: 16, thickness: 0.5, color: Colors.blueGrey),
-
                   if (item['sph_right'] != null ||
                       item['cyl_right'] != null ||
                       item['axis_right'] != null)
@@ -464,7 +453,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style:
                               TextStyle(fontSize: 12, color: Colors.grey[800])),
                     ),
-
                   if (item['sph_left'] != null ||
                       item['cyl_left'] != null ||
                       item['axis_left'] != null)
@@ -475,14 +463,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           style:
                               TextStyle(fontSize: 12, color: Colors.grey[800])),
                     ),
-
                   if (item['pd'] != null)
                     Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text("PD : ${item['pd']}",
                             style: TextStyle(
                                 fontSize: 12, color: Colors.grey[800]))),
-
                   if (item['note'] != null)
                     Padding(
                         padding: const EdgeInsets.only(top: 8),
@@ -500,7 +486,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  // 💡 SEKSI UI BARU UNTUK METODE PEMBAYARAN
   Widget _buildPaymentMethodSection() {
     return Container(
       color: Colors.white,
@@ -588,7 +573,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               const Text("Subtotal Produk",
                   style: TextStyle(color: Colors.grey)),
-              Text("Rp ${subtotalProduk.toStringAsFixed(0)}"),
+              // 💡 FORMAT RUPIAH DITERAPKAN DI SINI
+              Text(formatRupiah(subtotalProduk)),
             ],
           ),
           const SizedBox(height: 8),
@@ -601,7 +587,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ? const Text("Menghitung...",
                       style: TextStyle(
                           color: Colors.grey, fontStyle: FontStyle.italic))
-                  : Text("Rp ${ongkosKirim.toStringAsFixed(0)}"),
+                  // 💡 FORMAT RUPIAH DITERAPKAN DI SINI
+                  : Text(formatRupiah(ongkosKirim)),
             ],
           ),
         ],
@@ -625,8 +612,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
       child: SafeArea(
         child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.spaceBetween, // Diubah agar lebih rapi
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Column(
               mainAxisSize: MainAxisSize.min,
@@ -634,8 +620,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               children: [
                 const Text("Total Pembayaran",
                     style: TextStyle(fontSize: 12, color: Colors.grey)),
+                // 💡 FORMAT RUPIAH DITERAPKAN DI SINI
                 Text(
-                  "Rp ${grandTotal.toStringAsFixed(0)}",
+                  formatRupiah(grandTotal),
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -649,49 +636,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               height: 46,
               width: 150,
               child: ElevatedButton(
-                // Tombol mati jika alamat kosong, ongkir belum selesai dihitung, atau sedang proses
                 onPressed: (isAddressReady &&
                         !isLoadingShipping &&
                         !isSubmitting)
                     ? () async {
                         setState(() => isSubmitting = true);
 
-                        // 1. Tembak API Checkout Laravel
-                        // 1. Tembak API Checkout Laravel
-                      final result = await OrderService.submitOrder(
-                        shippingCost: ongkosKirim,
-                        // 💡 PASTIKAN DIKIRIM SEBAGAI 'jne' AGAR DIKENALI BITESHIP
-                        courier: "jne", 
-                        paymentMethod: selectedPaymentMethod,
-                        addressData: mainAddress!,
-                      );
+                        final result = await OrderService.submitOrder(
+                          shippingCost: ongkosKirim,
+                          courier: "jne",
+                          paymentMethod: selectedPaymentMethod,
+                          addressData: mainAddress!,
+                        );
 
                         setState(() => isSubmitting = false);
 
-                        // 2. Cek apakah berhasil
-                        // 2. Cek apakah berhasil
                         if (result['status'] == 'success') {
                           final String snapToken = result['payment_token'];
 
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text("Pesanan berhasil! Mengalihkan ke pembayaran..."),
+                              content: Text(
+                                  "Pesanan berhasil! Mengalihkan ke pembayaran..."),
                               backgroundColor: Colors.green,
                             ),
                           );
 
-                          // 💡 BUKA HALAMAN PAYMENT SCREEN KITA SENDIRI
                           if (context.mounted) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PaymentScreen(snapToken: snapToken),
+                                builder: (context) =>
+                                    PaymentScreen(snapToken: snapToken),
                               ),
                             );
                           }
-                          
                         } else {
-                          // Jika gagal (misal server error)
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
@@ -735,5 +715,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           color: Colors.blue[50], borderRadius: BorderRadius.circular(8)),
       child: const Icon(Icons.image_outlined, color: Color(0xFF3F51B5)),
     );
+    
   }
 }

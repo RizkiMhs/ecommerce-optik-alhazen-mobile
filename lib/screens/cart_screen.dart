@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // 💡 IMPORT BARU UNTUK FORMAT HARGA
 import 'package:optik_alhazen_app/config/api_config.dart';
 import '../services/cart_service.dart';
 import '../widgets/alhazen_appbar.dart';
@@ -15,7 +16,6 @@ class _CartScreenState extends State<CartScreen> {
   List<dynamic> cartItems = [];
   bool isLoading = true;
 
-  // 💡 STATE BARU: Menyimpan ID produk yang sedang dicentang
   Set<int> selectedItemIds = {};
 
   @override
@@ -46,13 +46,11 @@ class _CartScreenState extends State<CartScreen> {
     int id = cartItems[index]['id'];
     setState(() {
       cartItems.removeAt(index);
-      selectedItemIds
-          .remove(id); // Hapus juga dari daftar centang jika produk dihapus
+      selectedItemIds.remove(id);
     });
     await CartService.deleteItem(id);
   }
 
-  // 💡 FUNGSI BARU: Mengubah status centang per item
   void toggleSelection(int cartId) {
     setState(() {
       if (selectedItemIds.contains(cartId)) {
@@ -63,23 +61,27 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
-  // 💡 FUNGSI BARU: Centang semua / Hilangkan semua
   void toggleAll(bool? value) {
     setState(() {
       if (value == true) {
-        // Masukkan semua ID ke dalam Set
         selectedItemIds =
             cartItems.map<int>((item) => item['id'] as int).toSet();
       } else {
-        // Kosongkan Set
         selectedItemIds.clear();
       }
     });
   }
 
+  // 💡 FUNGSI BARU: Untuk mengubah angka mentah menjadi format Rupiah rapi
+  String formatRupiah(dynamic amount) {
+    double parsedAmount = double.tryParse(amount.toString()) ?? 0;
+    return NumberFormat.currency(
+            locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+        .format(parsedAmount);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // 💡 UPDATE RUMUS TOTAL: Hanya hitung item yang ada di dalam selectedItemIds
     double total = cartItems
         .where((item) => selectedItemIds.contains(item['id']))
         .fold(0, (sum, item) {
@@ -125,8 +127,6 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // --- KOMPONEN UI ---
-
   Widget buildPlaceholder() {
     return Container(
       width: 80,
@@ -143,7 +143,7 @@ class _CartScreenState extends State<CartScreen> {
   Widget _buildCartItemCard(dynamic item, double itemTotalPrice, int index) {
     final productData = item['product'];
     final String? imageUrl = productData['image_url'];
-    final int cartId = item['id']; // ID unik dari tabel cart
+    final int cartId = item['id'];
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -160,26 +160,21 @@ class _CartScreenState extends State<CartScreen> {
         ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment
-            .center, // Ubah ke center agar sejajar dengan checkbox
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // 💡 UI BARU: Checkbox untuk setiap item
           Checkbox(
             value: selectedItemIds.contains(cartId),
             onChanged: (bool? value) => toggleSelection(cartId),
-            activeColor: Color(0xFF3F51B5),
+            activeColor: const Color(0xFF3F51B5),
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
-
-          // --- THUMBNAIL GAMBAR ---
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: (imageUrl != null && imageUrl.isNotEmpty)
                 ? Image.network(
                     imageUrl,
-                    width:
-                        70, // Sedikit diperkecil untuk memberi ruang pada checkbox
+                    width: 70,
                     height: 70,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
@@ -191,10 +186,7 @@ class _CartScreenState extends State<CartScreen> {
                   )
                 : buildPlaceholder(),
           ),
-
           const SizedBox(width: 12),
-
-          // --- INFO DETAIL PRODUK ---
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,17 +210,17 @@ class _CartScreenState extends State<CartScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    // 💡 UBAH HARGA ITEM DI SINI
                     Text(
-                      "Rp ${itemTotalPrice.toStringAsFixed(0)}",
+                      formatRupiah(itemTotalPrice),
                       style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF3F51B5)),
                     ),
 
-                    // Box Kontrol Qty
                     Container(
-                      height: 32, // Dibuat lebih proporsional
+                      height: 32,
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300),
                         borderRadius: BorderRadius.circular(6),
@@ -281,7 +273,6 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Widget _buildCheckoutBar(double total) {
-    // Cek apakah semua barang sudah dicentang
     bool isAllSelected =
         cartItems.isNotEmpty && selectedItemIds.length == cartItems.length;
 
@@ -300,30 +291,28 @@ class _CartScreenState extends State<CartScreen> {
       child: SafeArea(
         child: Row(
           children: [
-            // 💡 UI BARU: Tombol Pilih Semua
             Row(
               children: [
                 Checkbox(
                   value: isAllSelected,
                   onChanged: toggleAll,
-                  activeColor: Color(0xFF3F51B5),
+                  activeColor: const Color(0xFF3F51B5),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4)),
                 ),
                 const Text("Semua", style: TextStyle(color: Colors.grey)),
               ],
             ),
-
-            const Spacer(), // Memberi jarak fleksibel ke kanan
-
+            const Spacer(),
             Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 const Text("Total Belanja",
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
+                // 💡 UBAH HARGA TOTAL DI SINI
                 Text(
-                  "Rp ${total.toStringAsFixed(0)}",
+                  formatRupiah(total),
                   style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -336,17 +325,14 @@ class _CartScreenState extends State<CartScreen> {
               height: 46,
               width: 120,
               child: ElevatedButton(
-                // 💡 LOGIKA BARU: Matikan tombol jika tidak ada yang dicentang
                 onPressed: selectedItemIds.isEmpty
                     ? null
                     : () {
-                        // 1. Saring (filter) hanya barang yang dicentang
                         final selectedItems = cartItems
                             .where(
                                 (item) => selectedItemIds.contains(item['id']))
                             .toList();
 
-                        // 2. Bawa data tersebut ke halaman CheckoutScreen
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -356,9 +342,8 @@ class _CartScreenState extends State<CartScreen> {
                         );
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3F51B5),
-                  disabledBackgroundColor:
-                      Colors.grey[300], // Warna saat tombol mati
+                  backgroundColor: const Color(0xFF3F51B5),
+                  disabledBackgroundColor: Colors.grey[300],
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),

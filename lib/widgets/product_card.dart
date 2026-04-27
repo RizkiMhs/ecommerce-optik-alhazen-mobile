@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // 💡 IMPORT BARU UNTUK FORMAT HARGA
 
 class ProductCard extends StatelessWidget {
   final Map product;
@@ -6,6 +7,14 @@ class ProductCard extends StatelessWidget {
 
   const ProductCard({Key? key, required this.product, required this.onTap})
       : super(key: key);
+
+  // 💡 FUNGSI BARU: Untuk mengubah angka mentah menjadi format Rupiah rapi
+  String formatRupiah(dynamic amount) {
+    double parsedAmount = double.tryParse(amount.toString()) ?? 0;
+    return NumberFormat.currency(
+            locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+        .format(parsedAmount);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +28,8 @@ class ProductCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20), // Sudut lebih bulat sesuai referensi
+          borderRadius:
+              BorderRadius.circular(20), // Sudut lebih bulat sesuai referensi
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -72,22 +82,6 @@ class ProductCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      // Badge Status Stok
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: stock <= 10 ? Colors.orange[50] : Colors.green[50],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          stock <= 10 ? "Low Stock : $stock" : "In Stock : $stock",
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: stock <= 10 ? Colors.orange[700] : Colors.green[700],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
@@ -104,14 +98,16 @@ class ProductCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // 💡 BAGIAN YANG BERUBAH: Menggunakan fungsi formatRupiah
                       Text(
-                        "Rp ${product['base_price']}",
+                        formatRupiah(product['base_price']),
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF3F51B5), // Warna biru tema Alhazen
                         ),
                       ),
+
                       // Tombol Keranjang sesuai referensi
                       Container(
                         padding: const EdgeInsets.all(8),

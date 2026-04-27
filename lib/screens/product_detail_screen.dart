@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:intl/intl.dart';
 
 // Sesuaikan dengan path project kamu
 import 'package:optik_alhazen_app/config/api_config.dart';
+import 'package:optik_alhazen_app/screens/cart_screen.dart';
 import 'package:optik_alhazen_app/services/lens_service.dart';
 import 'package:optik_alhazen_app/services/cart_service.dart';
-import 'package:optik_alhazen_app/widgets/alhazen_appbar.dart'; // 🔥 IMPORT CART SERVICE
 
 class ProductDetailScreen extends StatefulWidget {
   final Map product;
@@ -22,6 +23,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   List<Map<String, dynamic>> lensOptions = [];
   Map<String, dynamic>? selectedLens;
 
+  // STATE UNTUK INDIKATOR CAROUSEL GAMBAR
+  int _currentImageIndex = 0;
+
   // --- STATE UNTUK RESEP MATA ---
   final TextEditingController _sphRightCtrl = TextEditingController();
   final TextEditingController _cylRightCtrl = TextEditingController();
@@ -30,12 +34,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final TextEditingController _pdCtrl = TextEditingController();
   final TextEditingController _noteCtrl = TextEditingController();
 
-  // 🔥 STATE UNTUK LOADING TOMBOL KERANJANG
+  // STATE UNTUK LOADING TOMBOL KERANJANG
   bool _isLoading = false;
 
   @override
   void dispose() {
-    // Jangan lupa bersihkan memory saat keluar layar
     _sphRightCtrl.dispose();
     _cylRightCtrl.dispose();
     _sphLeftCtrl.dispose();
@@ -55,30 +58,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final options = await LensService.getLensOptions();
     setState(() {
       lensOptions = options;
-      if (lensOptions.isNotEmpty) selectedLens = lensOptions[0];
     });
+  }
+
+  String formatRupiah(dynamic amount) {
+    double parsedAmount = double.tryParse(amount.toString()) ?? 0;
+    return NumberFormat.currency(
+            locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
+        .format(parsedAmount);
   }
 
   @override
   Widget build(BuildContext context) {
     // --- SETUP GAMBAR ---
     final List<String> images = [];
-    
-    // 💡 SOLUSI: Kita hilangkan kata '/api' dari baseUrl khusus untuk gambar
     final String serverUrl = ApiConfig.baseUrl.replaceAll('/api', '');
-    
-    // 1. Prioritas Utama: Ambil semua gambar dari relasi 'images'
-    if (widget.product['images'] != null && widget.product['images'].isNotEmpty) {
+
+    if (widget.product['images'] != null &&
+        widget.product['images'].isNotEmpty) {
       for (var img in widget.product['images']) {
-        if (img['image_name'] != null && img['image_name'].toString().isNotEmpty) {
-          // Gunakan serverUrl yang sudah bersih dari kata '/api'
+        if (img['image_name'] != null &&
+            img['image_name'].toString().isNotEmpty) {
           images.add("$serverUrl/storage/${img['image_name']}");
         }
       }
-    } 
-    // 2. Fallback: Jika relasi 'images' kosong, gunakan 'image_url' (gambar utama)
-    else if (widget.product['image_url'] != null && widget.product['image_url'].toString().isNotEmpty) {
-      // image_url dari Laravel biasanya sudah berbentuk URL lengkap yang benar
+    } else if (widget.product['image_url'] != null &&
+        widget.product['image_url'].toString().isNotEmpty) {
       images.add(widget.product['image_url']);
     }
 
@@ -88,71 +93,146 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     double lensPrice = selectedLens?['price'] ?? 0;
     double totalPrice = basePrice + lensPrice;
 
-    String formatRupiah(double value) {
-      return "Rp ${value.toStringAsFixed(0)}";
-    }
-
-    // Pengecekan kategori produk
     bool isEyewear = widget.product['category'] != 'aksesoris';
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // appBar: AppBar(
-      //   title: Text(widget.product['name'] ?? 'Detail Produk'),
-      //   elevation: 0,
-      //   backgroundColor: Colors.white,
-      //   foregroundColor: Colors.black,
-      // ),
 
-      appBar: const AlhazenAppBar(title: "Detail Produk"),
+      // 💡 APP BAR BARU SESUAI REFERENSI GAMBAR
+      // 💡 APP BAR BARU SESUAI REFERENSI GAMBAR
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Detail Produk",
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16.0, top: 8, bottom: 8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100, // Background bulat abu-abu
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  size: 18, color: Colors.black87),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0, top: 8, bottom: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100, // Background bulat abu-abu
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                // 💡 UBAH DI SINI: Ikon hati diganti jadi keranjang
+                icon: const Icon(Icons.shopping_cart_outlined,
+                    size: 20, color: Colors.black87),
+                onPressed: () {
+                  // TODO: Tambahkan navigasi ke CartScreen Anda di sini
+                  // Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- 1. SLIDER GAMBAR ---
+            const SizedBox(height: 10), // Jarak sedikit dari AppBar
+
+            // --- 1. SLIDER GAMBAR (DESAIN BARU) ---
             if (images.isNotEmpty)
-              CarouselSlider(
-                items: images.map((url) {
-                  return Builder(
-                    builder: (BuildContext context) {
-                      return Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.grey[100],
-                        ),
-                        clipBehavior: Clip.hardEdge,
-                        child: Image.network(
-                          url,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) {
-                            return Container(
-                              color: Colors.grey[200],
-                              child: const Icon(Icons.broken_image,
-                                  size: 50, color: Colors.grey),
-                            );
-                          },
-                        ),
+              Column(
+                children: [
+                  CarouselSlider(
+                    items: images.map((url) {
+                      return Builder(
+                        builder: (BuildContext context) {
+                          return Container(
+                            width: double.infinity,
+                            // 💡 Margin besar di kiri-kanan sesuai gambar
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(
+                                  24), // Melengkung lebih halus
+                              color: const Color(
+                                  0xFFEEF2F6), // Warna biru keabu-abuan pucat
+                            ),
+                            clipBehavior: Clip.hardEdge,
+                            child: Image.network(
+                              url,
+                              fit: BoxFit
+                                  .cover, // Jika gambarnya transparan, background di atas akan tembus
+                              errorBuilder: (_, __, ___) {
+                                return const Center(
+                                  child: Icon(Icons.broken_image,
+                                      size: 50, color: Colors.grey),
+                                );
+                              },
+                            ),
+                          );
+                        },
                       );
-                    },
-                  );
-                }).toList(),
-                options: CarouselOptions(
-                  height: 300,
-                  viewportFraction: 0.9,
-                  enlargeCenterPage: true,
-                  autoPlay: true,
-                ),
+                    }).toList(),
+                    options: CarouselOptions(
+                      height: 320, // Dipertinggi sedikit agar proporsional
+                      viewportFraction: 1.0,
+                      autoPlay: true,
+                      onPageChanged: (index, reason) {
+                        setState(() {
+                          _currentImageIndex = index;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (images.length > 1)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: images.asMap().entries.map((entry) {
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: _currentImageIndex == entry.key ? 20.0 : 8.0,
+                          height: 8.0,
+                          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: _currentImageIndex == entry.key
+                                ? const Color(0xFF3F51B5)
+                                : Colors.grey.shade300,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                ],
               )
             else
               Container(
-                height: 300,
+                height: 320,
                 width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: const EdgeInsets.symmetric(horizontal: 20),
                 decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFFEEF2F6),
+                  borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Center(
                     child: Icon(Icons.image, size: 50, color: Colors.grey)),
@@ -162,7 +242,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
             // --- 2. INFO PRODUK UTAMA ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 20), // Disamakan dengan margin gambar
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -177,7 +258,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     style: const TextStyle(
                       fontSize: 22,
                       color: Color(0xFF3F51B5),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w900, // Dipertebal sedikit
                     ),
                   ),
                 ],
@@ -186,15 +267,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
             const SizedBox(height: 24),
 
-            // --- 3. SEKSI PILIH LENSA & RESEP (HANYA MUNCUL JIKA BUKAN AKSESORIS) ---
+            // --- 3. SEKSI PILIH LENSA & RESEP ---
             if (isEyewear) ...[
-              // Seksi Pilih Lensa
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Pilih Lensa",
+                    const Text("Pilih Lensa Tambahan (Opsional)",
                         style: TextStyle(
                             fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 12),
@@ -211,7 +291,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         return InkWell(
                           onTap: () {
                             setState(() {
-                              selectedLens = lens;
+                              if (isSelected) {
+                                selectedLens = null; // Batalkan pilihan
+                              } else {
+                                selectedLens = lens; // Pilih lensa
+                              }
                             });
                           },
                           borderRadius: BorderRadius.circular(12),
@@ -257,12 +341,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ]
                                   ],
                                 ),
-                                Radio<int>(
+                                Radio<int?>(
                                   value: lens['id'],
                                   groupValue: selectedLens?['id'],
+                                  toggleable: true,
                                   onChanged: (value) {
                                     setState(() {
-                                      selectedLens = lens;
+                                      if (value == null) {
+                                        selectedLens = null;
+                                      } else {
+                                        selectedLens = lens;
+                                      }
                                     });
                                   },
                                   activeColor: Colors.blueAccent,
@@ -281,7 +370,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
               // Seksi Input Resep
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -376,7 +465,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
             // --- 4. DESKRIPSI PRODUK ---
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -413,30 +502,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           height: 50,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF3F51B5),
+              backgroundColor: const Color(0xFF3F51B5),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
               elevation: 0,
             ),
-            // 🔥 LOGIKA KETIKA TOMBOL DITEKAN
             onPressed: _isLoading
-                ? null // Matikan tombol jika sedang loading
+                ? null
                 : () async {
                     setState(() {
-                      _isLoading = true; // Nyalakan loading
+                      _isLoading = true;
                     });
 
-                    // 1. Siapkan data yang mau dikirim ke Laravel
                     final Map<String, dynamic> payloadKeranjang = {
                       'product_id': widget.product['id'],
-                      'qty': 1, // Default pesannya 1
-                      // Jika aksesoris, lens_type_id dikosongkan (null)
-                      // 'lens_type_id': isEyewear ? selectedLens?['id'] : null,
-                      'lens_type_id': selectedLens?[
-                          'id'], // Jika null, Laravel akan anggap tidak pilih lensa
-
-                      // Data Resep
+                      'qty': 1,
+                      'lens_type_id': selectedLens?['id'],
                       'sph_right': _sphRightCtrl.text,
                       'cyl_right': _cylRightCtrl.text,
                       'sph_left': _sphLeftCtrl.text,
@@ -445,16 +527,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       'note': _noteCtrl.text,
                     };
 
-                    // 2. Panggil API lewat CartService
                     bool success =
                         await CartService.addToCart(payloadKeranjang);
 
-                    // 3. Matikan loading
                     setState(() {
                       _isLoading = false;
                     });
 
-                    // 4. Cek hasil dan beri notifikasi
                     if (success) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
@@ -462,7 +541,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           backgroundColor: Colors.green,
                         ),
                       );
-                      // Opsional: Kembali ke halaman sebelumnya
                       Navigator.pop(context);
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -474,7 +552,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       );
                     }
                   },
-            // 🔥 TAMPILAN TOMBOL (Teks atau Loading berputar)
             child: _isLoading
                 ? const SizedBox(
                     height: 24,

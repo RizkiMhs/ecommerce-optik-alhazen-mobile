@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/profile_screen.dart';
-import '../screens/order_screen.dart'; // 💡 Tambahkan ini
+import '../screens/order_screen.dart';
+import '../screens/consultation_chat_screen.dart'; // 💡 Import layar chat
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -14,8 +15,9 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    HomeScreen(),
-    OrderScreen(),
+    const HomeScreen(),
+    const OrderScreen(),
+    const ConsultationChatScreen(), // 💡 Tambahkan halaman Konsultasi di index 2
     ProfileScreen(),
   ];
 
@@ -28,9 +30,9 @@ class _MainNavigationState extends State<MainNavigation> {
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            color: Color(0xFF3F51B5),
+            color: const Color(0xFF3F51B5),
             borderRadius: BorderRadius.circular(35),
-            boxShadow: [
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 10,
@@ -42,7 +44,8 @@ class _MainNavigationState extends State<MainNavigation> {
             children: [
               _navItem(Icons.home, "Beranda", 0),
               _navItem(Icons.receipt_long, "Pesanan", 1),
-              _navItem(Icons.person, "Profil", 2),
+              _navItem(Icons.chat_bubble_outline, "Konsultasi", 2), // 💡 Menu Baru
+              _navItem(Icons.person, "Profil", 3), // 💡 Geser Profil ke index 3
             ],
           ),
         ),
@@ -58,8 +61,8 @@ class _MainNavigationState extends State<MainNavigation> {
         setState(() => _currentIndex = index);
       },
       child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isActive ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(30),
@@ -68,13 +71,13 @@ class _MainNavigationState extends State<MainNavigation> {
           children: [
             Icon(
               icon,
-              color: isActive ? Color(0xFF3F51B5) : Colors.white,
+              color: isActive ? const Color(0xFF3F51B5) : Colors.white,
             ),
             if (isActive) ...[
-              SizedBox(width: 6),
+              const SizedBox(width: 6),
               Text(
                 label,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Color(0xFF3F51B5),
                   fontWeight: FontWeight.bold,
                 ),

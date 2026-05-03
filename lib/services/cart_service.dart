@@ -4,32 +4,7 @@ import '../config/api_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CartService {
-  // --- 1. FUNGSI UNTUK MENGAMBIL ISI KERANJANG (GET) ---
-  // static Future<List<dynamic>> getCartItems() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final token = prefs.getString('access_token');
-
-  //   final res = await http.get(
-  //     Uri.parse("${ApiConfig.baseUrl}/cart"),
-  //     headers: {
-  //       'Accept': 'application/json',
-  //       'Authorization': 'Bearer $token', // 🔥 Penting untuk otentikasi
-  //     },
-  //   );
-
-  //   print("GET CART STATUS: ${res.statusCode}");
-  //   print("GET CART BODY: ${res.body}");
-
-  //   if (res.statusCode == 200) {
-  //     // Biasanya API Laravel membungkus list di dalam key 'data'
-  //     // Jika list langsung dikirim, cukup: return jsonDecode(res.body);
-  //     final decoded = jsonDecode(res.body);
-  //     return decoded['data'] ?? decoded; 
-  //   } else {
-  //     return []; // 🔥 Biar tidak crash saat keranjang kosong atau token expired
-  //   }
-  // }
-
+  
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');

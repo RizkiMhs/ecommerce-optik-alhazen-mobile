@@ -31,30 +31,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool isSubmitting = false;
 
   // STATE BARU: Metode Pembayaran
-  String selectedPaymentMethod = "QRIS";
+  // 💡 Ubah default metode pembayaran ke BCA
+  String selectedPaymentMethod = "Transfer Bank BCA";
+
+  // 💡 Hanya sisakan dua opsi: BCA dan BSI
   final List<Map<String, dynamic>> paymentOptions = [
     {
-      "name": "QRIS",
-      "icon": Icons.qr_code_2,
-      "desc": "Bayar instan pakai e-wallet/m-banking"
-    },
-    {
       "name": "Transfer Bank BCA",
+      "code": "bca_va", // Kode resmi Midtrans untuk Virtual Account BCA
       "icon": Icons.account_balance,
-      "desc": "Dicek otomatis"
+      "desc": "Dicek otomatis, tersedia 24 jam"
     },
     {
-      "name": "Transfer Bank Mandiri",
+      "name": "Transfer Bank BSI",
+      "code": "bsi_va", // Kode resmi Midtrans untuk Virtual Account BSI
       "icon": Icons.account_balance,
-      "desc": "Dicek otomatis"
-    },
-    {
-      "name": "GoPay",
-      "icon": Icons.account_balance_wallet,
-      "desc": "Bayar instan"
+      "desc": "Dicek otomatis, khusus Bank Syariah Indonesia"
     },
   ];
-
   @override
   void initState() {
     super.initState();
@@ -642,10 +636,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ? () async {
                         setState(() => isSubmitting = true);
 
+                        // 💡 Ambil KODE Midtrans dari metode yang dipilih
+                        final selectedCode = paymentOptions.firstWhere(
+                            (p) => p['name'] == selectedPaymentMethod)['code'];
+
                         final result = await OrderService.submitOrder(
                           shippingCost: ongkosKirim,
                           courier: "jne",
-                          paymentMethod: selectedPaymentMethod,
+                          paymentMethod: selectedCode, // 💡 Kirim KODE-nya ke Laravel
                           addressData: mainAddress!,
                         );
 

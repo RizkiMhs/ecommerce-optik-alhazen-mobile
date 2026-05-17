@@ -156,4 +156,33 @@ class OrderService {
       return [];
     }
   }
+
+  // 💡 FUNGSI BARU: Membatalkan Pesanan
+  static Future<bool> cancelOrder(String orderId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    try {
+      final res = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/orders/$orderId/cancel'),
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print("=== DEBUG CANCEL ORDER ===");
+      print("Status: ${res.statusCode}");
+      print("Body: ${res.body}");
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        return data['status'] == 'success';
+      }
+      return false;
+    } catch (e) {
+      print("Error membatalkan pesanan: $e");
+      return false;
+    }
+  }
 }

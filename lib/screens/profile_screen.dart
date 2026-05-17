@@ -13,17 +13,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? user;
   List addresses = [];
 
-  // Mendefinisikan gaya bayangan kartu secara global agar konsisten
   final List<BoxShadow> _cardShadow = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withOpacity(0.04),
       blurRadius: 10,
-      offset: Offset(0, 5),
+      offset: const Offset(0, 4),
     ),
   ];
 
-  // Mendefinisikan radius sudut secara global agar konsisten
-  final BorderRadius _cardBorderRadius = BorderRadius.circular(16);
+  final BorderRadius _cardBorderRadius = BorderRadius.circular(20);
 
   @override
   void initState() {
@@ -43,16 +41,211 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // 💡 LOGIKA BARU: Mengambil nomor telepon dari tabel alamat
+  String get _displayPhone {
+    if (addresses.isEmpty) return 'Tidak ada nomor telepon';
+    try {
+      // Cari alamat utama (is_main == 1), jika tidak ada, ambil alamat pertama saja
+      final mainAddr = addresses.firstWhere(
+        (a) => a['is_main'] == 1,
+        orElse: () => addresses[0],
+      );
+      return mainAddr['phone'] ?? 'Tidak ada nomor telepon';
+    } catch (e) {
+      return 'Tidak ada nomor telepon';
+    }
+  }
+
+  // 💡 FUNGSI BARU: Menampilkan Dialog Ganti Password
+  // 💡 FUNGSI DIALOG GANTI PASSWORD YANG DIPERBARUI
+  void _showChangePasswordDialog() {
+    final TextEditingController oldPasswordController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
+    final TextEditingController confirmPasswordController =
+        TextEditingController();
+
+    bool isUpdating = false;
+    bool obscureOld = true;
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Tidak bisa ditutup dengan klik luar area
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("Ganti Password",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // --- 1. PASSWORD LAMA ---
+                TextField(
+                  controller: oldPasswordController,
+                  obscureText: obscureOld,
+                  decoration: InputDecoration(
+                    labelText: "Password Lama",
+                    prefixIcon:
+                        const Icon(Icons.lock_outline, color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          obscureOld ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                          size: 20),
+                      onPressed: () =>
+                          setStateDialog(() => obscureOld = !obscureOld),
+                    ),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // --- 2. PASSWORD BARU ---
+                TextField(
+                  controller: newPasswordController,
+                  obscureText: obscureNew,
+                  decoration: InputDecoration(
+                    labelText: "Password Baru",
+                    prefixIcon:
+                        const Icon(Icons.lock_reset, color: Color(0xFF3F51B5)),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          obscureNew ? Icons.visibility_off : Icons.visibility,
+                          color: Colors.grey,
+                          size: 20),
+                      onPressed: () =>
+                          setStateDialog(() => obscureNew = !obscureNew),
+                    ),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // --- 3. KONFIRMASI PASSWORD BARU ---
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: obscureConfirm,
+                  decoration: InputDecoration(
+                    labelText: "Konfirmasi Password Baru",
+                    prefixIcon: const Icon(Icons.check_circle_outline,
+                        color: Color(0xFF3F51B5)),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                          obscureConfirm
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.grey,
+                          size: 20),
+                      onPressed: () => setStateDialog(
+                          () => obscureConfirm = !obscureConfirm),
+                    ),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isUpdating ? null : () => Navigator.pop(context),
+              child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3F51B5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: isUpdating
+                  ? null
+                  : () async {
+                      // 💡 Validasi Input
+                      if (oldPasswordController.text.isEmpty ||
+                          newPasswordController.text.isEmpty ||
+                          confirmPasswordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text("Semua kolom harus diisi!"),
+                                backgroundColor: Colors.red));
+                        return;
+                      }
+                      if (newPasswordController.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text("Password baru minimal 6 karakter!"),
+                                backgroundColor: Colors.red));
+                        return;
+                      }
+                      if (newPasswordController.text !=
+                          confirmPasswordController.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    "Password baru dan konfirmasi tidak cocok!"),
+                                backgroundColor: Colors.red));
+                        return;
+                      }
+
+                      setStateDialog(() => isUpdating = true);
+
+                      // 💡 Panggil API
+                      bool success = await ProfileService.updatePassword(
+                          user!['name'],
+                          oldPasswordController.text,
+                          newPasswordController.text);
+
+                      setStateDialog(() => isUpdating = false);
+
+                      if (success) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Password berhasil diubah!"),
+                              backgroundColor: Colors.green),
+                        );
+                      } else {
+                        // Jika false, kemungkinan besar password lama salah
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  "Gagal mengubah. Pastikan password lama Anda benar!"),
+                              backgroundColor: Colors.red),
+                        );
+                      }
+                    },
+              child: isUpdating
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text("Simpan", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _logout() async {
-    // 💡 Tampilkan dialog konfirmasi sebelum logout
     bool confirm = await showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Keluar'),
+            title: const Text('Keluar Akun'),
             content:
                 const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -61,7 +254,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               ElevatedButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
                 child:
                     const Text('Keluar', style: TextStyle(color: Colors.white)),
               ),
@@ -85,390 +279,359 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (user == null) {
-      return Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+          body: Center(
+              child: CircularProgressIndicator(color: Color(0xFF3F51B5))));
     }
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // Latar belakang biru di bagian atas (seperti referensi)
-          Container(
-            height: MediaQuery.of(context).size.height * 0.3,
-            color: Color(0xFF3F51B5),
-          ),
-
-          // Konten utama yang dapat digulir
-          SafeArea(
-            child: ListView(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              children: [
-                // App Bar Modern buatan sendiri (ikon kembali, profil, ikon edit)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.of(context).pop(),
+      backgroundColor: const Color(
+          0xFFF5F7FA), // Latar belakang abu-abu sangat muda (modern)
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // --- HEADER SECTION (Lengkungan Biru di Atas) ---
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.only(
+                  top: 60, bottom: 40, left: 20, right: 20),
+              decoration: const BoxDecoration(
+                color: Color(0xFF3F51B5),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(40),
+                  bottomRight: Radius.circular(40),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // 💡 HAPUS ICON BACK & EDIT: Hanya Teks Saja
+                  const Text(
+                    "PROFIL SAYA",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
                     ),
-                    Text(
-                      "PROFIL",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                  ),
+                  const SizedBox(height: 30),
+
+                  // Avatar Profil
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle),
+                    child: const CircleAvatar(
+                      radius: 50,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.person,
+                          size: 55, color: Color(0xFF3F51B5)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Nama & Email
+                  Text(
+                    user!['name'] ?? 'Pengguna',
+                    style: const TextStyle(
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.edit, color: Colors.white),
-                      onPressed: () {
-                        // Tidak ada logika yang ditentukan untuk ini di kode asli,
-                        // tetapi ikonnya ada di referensi.
-                      },
-                    ),
-                  ],
-                ),
-                SizedBox(height: 20),
-
-                // Kartu Profil Utama (dengan foto melingkar, nama, dan detail dummy)
-                Container(
-                  padding: EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: _cardBorderRadius,
-                    boxShadow: _cardShadow,
+                        color: Colors.white),
                   ),
-                  child: Column(
-                    children: [
-                      // Foto Profil Melingkar
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.blue[100],
-                        child: Icon(Icons.person,
-                            size: 60, color: Colors.blue[600]),
-                      ),
-                      SizedBox(height: 16),
-
-                      // Nama Pengguna (Teks tebal, gelap)
-                      Text(
-                        user!['name'] ?? 'Pengguna',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[900],
-                        ),
-                      ),
-                      SizedBox(height: 4),
-
-                      // Detail Sekunder Dummy (gaya referensi 'STD - 12(B)')
-                      Text(
-                        "Pelanggan Optik",
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                      SizedBox(height: 16),
-
-                      // Teks Dummy Bergaya 'Lorem Ipsum'
-                      Text(
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 20),
-
-                // Bagian Informasi Kontak (dengan ikon dan teks untuk email dan telepon dummy)
-                Container(
-                  padding: EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: _cardBorderRadius,
-                    boxShadow: _cardShadow,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Baris Telepon (dummy)
-                      Row(
-                        children: [
-                          Icon(Icons.phone, color: Color(0xFF3F51B5), size: 20),
-                          SizedBox(width: 12),
-                          Text(
-                            user!['phone'] ?? 'Tidak ada nomor telepon',
-                            style: TextStyle(
-                                fontSize: 15, color: Colors.grey[800]),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 16),
-
-                      // Baris Email (dari data asli)
-                      Row(
-                        children: [
-                          Icon(Icons.email, color: Color(0xFF3F51B5), size: 20),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              user!['email'] ?? 'Tidak ada email',
-                              style: TextStyle(
-                                  fontSize: 15, color: Colors.grey[800]),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 24),
-
-                // Judul "Alamat" bergaya modern
-                Text(
-                  "Alamat",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[900],
-                  ),
-                ),
-                SizedBox(height: 12),
-
-                // Daftar Alamat (kartu alamat yang dimodernisasi)
-// Daftar Alamat (kartu alamat yang dimodernisasi)
-                ...addresses.map((a) {
-                  bool isMain = a['is_main'] == 1;
-                  // Ambil teks asli
-                  String rawLabel = a['label'] ?? 'Alamat';
-
-                  // Format huruf pertama jadi kapital, sisanya kecil
-                  String formattedLabel = rawLabel.isNotEmpty
-                      ? '${rawLabel[0].toUpperCase()}${rawLabel.substring(1).toLowerCase()}'
-                      : rawLabel;
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 16),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isMain ? Colors.blue[50] : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isMain ? Colors.blue[300]! : Colors.grey[200]!,
-                        width: isMain ? 1.5 : 1.0,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
+                      color: Colors.black.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // --- BARIS ATAS: Label, Badge "Utama", dan Aksi ---
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              // Judul Alamat (Label)
-                              Text(
-                                formattedLabel,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey[900],
-                                ),
-                              ),
-                              SizedBox(width: 8),
-
-                              // Badge "Utama" (Hanya muncul jika isMain == true)
-                              if (isMain)
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[100],
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    "Utama",
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue[800],
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-
-                              Spacer(), // Mendorong tombol aksi ke pojok kanan
-
-                              // Trailing Custom (Teks Ubah dan Hapus)
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Tombol Teks: Ubah
-                                  InkWell(
-                                    onTap: () async {
-                                      final result = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              AddAddressScreen(data: a),
-                                        ),
-                                      );
-                                      if (result == true) loadData();
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 4.0, vertical: 4.0),
-                                      child: Text(
-                                        "Ubah",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.blue[700],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-
-                                  // Garis Pemisah (Divider)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8.0),
-                                    child: Text(
-                                      "|",
-                                      style: TextStyle(
-                                          color: Colors.grey[300],
-                                          fontSize: 14),
-                                    ),
-                                  ),
-
-                                  // Tombol Teks: Hapus
-                                  InkWell(
-                                    onTap: () async {
-                                      await ProfileService.deleteAddress(
-                                          a['id']);
-                                      loadData();
-                                    },
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 4.0, vertical: 4.0),
-                                      child: Text(
-                                        "Hapus",
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.red[500],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-
-                          // --- BARIS BAWAH: Detail Alamat Lengkap ---
-                          Padding(
-                            // Padding kiri (left) dihapus karena radio button sudah hilang,
-                            // diganti dengan jarak atas (top) agar tidak menempel dengan judul
-                            padding: EdgeInsets.only(top: 2),
-                            child: Text(
-                              a['complete_address'] ?? 'Alamat tidak lengkap',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    child: Text(
+                      user!['email'] ?? 'Tidak ada email',
+                      style: TextStyle(fontSize: 14, color: Colors.blue[50]),
                     ),
-                  );
-                }).toList(),
-                SizedBox(height: 10),
+                  ),
+                ],
+              ),
+            ),
 
-                // Tombol "Tambah Alamat" Bergaya Navigasi Modern (seperti referensi 'Personal Detail')
-                InkWell(
-                  onTap: () async {
-                    // Logika asli tombol 'Tambah Alamat' dipertahankan
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => AddAddressScreen()),
-                    );
-
-                    if (result == true) {
-                      loadData(); // 🔥 refresh list alamat
-                    }
-                  },
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            // --- BODY SECTION ---
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 💡 KARTU QUOTE OPTIK ALHAZEN
+                  Container(
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors
-                          .grey[100], // Warna abu-abu muda seperti referensi
+                      color: Colors.white,
                       borderRadius: _cardBorderRadius,
                       boxShadow: _cardShadow,
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            Icon(Icons.add, color: Colors.grey[700], size: 20),
-                            SizedBox(width: 12),
-                            Text(
-                              "Tambah Alamat",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[800],
-                              ),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              shape: BoxShape.circle),
+                          child: const Icon(Icons.remove_red_eye_rounded,
+                              color: Color(0xFF3F51B5), size: 28),
                         ),
-                        Icon(Icons.arrow_forward_ios,
-                            color: Colors.grey[500], size: 16),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            "Melihat dunia lebih jelas dan indah bersama Optik Alhazen. Kami siap melayani kebutuhan penglihatan Anda.",
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey[700],
+                                height: 1.5,
+                                fontStyle: FontStyle.italic),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                ),
-                // 💡 INI TOMBOL LOGOUT BARU
-                SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton.icon(
-                    onPressed: _logout,
-                    icon: const Icon(Icons.logout, color: Colors.redAccent),
-                    label: const Text(
-                      "Keluar Akun",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.redAccent,
-                      ),
+                  const SizedBox(height: 24),
+
+                  // 💡 KARTU MENU PENGATURAN (Telp & Password)
+                  // 💡 KARTU MENU PENGATURAN (Telp & Password)
+                  const Text("Pengaturan Akun",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Container(
+                    // 💡 PERBAIKAN: Tambahkan padding atas dan bawah di sini agar seimbang
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: _cardBorderRadius,
+                      boxShadow: _cardShadow,
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Colors.red[50], // Latar belakang merah sangat muda
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        // border: Border.all(color: Colors.red[200]!),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          // 💡 vertical diubah jadi 0 agar patuh pada padding Container
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 0),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(Icons.phone_rounded,
+                                color: Colors.green),
+                          ),
+                          title: const Text("Nomor Telepon",
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                          subtitle: Text(_displayPhone,
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey.shade600)),
+                        ),
+
+                        Divider(
+                            height: 16,
+                            indent: 70,
+                            endIndent: 20,
+                            color: Colors.grey
+                                .shade200), // height divider sedikit dilebarkan
+
+                        ListTile(
+                          // 💡 vertical diubah jadi 0 agar patuh pada padding Container
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 0),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(Icons.lock_rounded,
+                                color: Colors.orange),
+                          ),
+                          title: const Text("Ganti Password",
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                          trailing: const Icon(Icons.chevron_right_rounded,
+                              color: Colors.grey),
+                          onTap: _showChangePasswordDialog,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  // 💡 DAFTAR ALAMAT
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Daftar Alamat",
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      InkWell(
+                        onTap: () async {
+                          final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const AddAddressScreen()));
+                          if (result == true) loadData();
+                        },
+                        child: const Text("+ Tambah",
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF3F51B5))),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  if (addresses.isEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text("Belum ada alamat tersimpan.",
+                            style: TextStyle(color: Colors.grey.shade500)),
+                      ),
+                    )
+                  else
+                    ...addresses.map((a) {
+                      bool isMain = a['is_main'] == 1;
+                      String rawLabel = a['label'] ?? 'Alamat';
+                      String formattedLabel = rawLabel.isNotEmpty
+                          ? '${rawLabel[0].toUpperCase()}${rawLabel.substring(1).toLowerCase()}'
+                          : rawLabel;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: _cardBorderRadius,
+                          border: Border.all(
+                              color: isMain
+                                  ? const Color(0xFF3F51B5)
+                                  : Colors.transparent,
+                              width: 1.5),
+                          boxShadow: _cardShadow,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on_rounded,
+                                      color: isMain
+                                          ? const Color(0xFF3F51B5)
+                                          : Colors.grey,
+                                      size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    formattedLabel,
+                                    style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey[900]),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  if (isMain)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                          color: Colors.blue.shade50,
+                                          borderRadius:
+                                              BorderRadius.circular(6)),
+                                      child: const Text("Utama",
+                                          style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF3F51B5))),
+                                    ),
+                                  const Spacer(),
+                                  PopupMenuButton<String>(
+                                    icon: const Icon(Icons.more_vert_rounded,
+                                        color: Colors.grey),
+                                    onSelected: (value) async {
+                                      if (value == 'edit') {
+                                        final result = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (_) =>
+                                                    AddAddressScreen(data: a)));
+                                        if (result == true) loadData();
+                                      } else if (value == 'delete') {
+                                        await ProfileService.deleteAddress(
+                                            a['id']);
+                                        loadData();
+                                      }
+                                    },
+                                    itemBuilder: (BuildContext context) =>
+                                        <PopupMenuEntry<String>>[
+                                      const PopupMenuItem<String>(
+                                          value: 'edit', child: Text('Ubah')),
+                                      const PopupMenuItem<String>(
+                                          value: 'delete',
+                                          child: Text('Hapus',
+                                              style: TextStyle(
+                                                  color: Colors.red))),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(left: 28, top: 4),
+                                child: Text(
+                                  a['complete_address'] ??
+                                      'Alamat tidak lengkap',
+                                  style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 13,
+                                      height: 1.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+
+                  const SizedBox(height: 30),
+
+                  // 💡 TOMBOL LOGOUT MERAH
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: OutlinedButton.icon(
+                      onPressed: _logout,
+                      icon: const Icon(Icons.logout_rounded,
+                          color: Colors.redAccent),
+                      label: const Text(
+                        "Keluar Akun",
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.redAccent),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side:
+                            BorderSide(color: Colors.red.shade200, width: 1.5),
+                        backgroundColor: Colors.red.shade50,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
-
-            // Tombol Logout di pojok kanan bawah (seperti referensi)
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

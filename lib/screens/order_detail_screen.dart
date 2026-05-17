@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:optik_alhazen_app/services/order_service.dart';
 import '../widgets/alhazen_appbar.dart';
-import 'payment_screen.dart'; // 💡 IMPORT BARU: Untuk navigasi ke Midtrans
-import 'tracking_screen.dart'; // 💡 IMPORT BARU: Untuk halaman pelacakan
+import 'payment_screen.dart'; // IMPORT BARU: Untuk navigasi ke Midtrans
+import 'tracking_screen.dart'; // IMPORT BARU: Untuk halaman pelacakan
+// IMPORT BARU: Untuk memanggil API pembatalan pesanan
+// Sesuaikan import path ini dengan lokasi file OrderService Anda
+// import '../services/order_service.dart';
 
 class OrderDetailScreen extends StatelessWidget {
   final Map<String, dynamic> order;
@@ -73,6 +77,93 @@ class OrderDetailScreen extends StatelessWidget {
     }
   }
 
+  // --- FUNGSI BARU: Konfirmasi dan Proses Pembatalan Pesanan ---
+  void _showCancelConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Batalkan Pesanan'),
+          content: const Text(
+              'Apakah Anda yakin ingin membatalkan pesanan ini? Aksi ini tidak dapat diurungkan.'),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          actions: [
+            TextButton(
+              child: const Text('Tutup', style: TextStyle(color: Colors.grey)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Tutup dialog
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Ya, Batalkan',
+                  style: TextStyle(color: Colors.white)),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Tutup dialog dulu
+
+                // Tampilkan loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (BuildContext context) {
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                );
+
+                try {
+                  // --- PASTIKAN ANDA SUDAH MEMBUAT FUNGSI INI DI ORDER SERVICE ---
+                  // final bool success = await OrderService.cancelOrder(order['id'].toString());
+
+                  // Simulasi proses pembatalan (Ganti dengan pemanggilan API Anda)
+                  // await Future.delayed(const Duration(seconds: 2));
+                  // final bool success = true;
+
+                  // Panggil API asli ke Laravel
+                  final bool success =
+                      await OrderService.cancelOrder(order['id'].toString());
+
+                  // Tutup loading indicator
+                  Navigator.of(context).pop();
+
+                  if (success) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Pesanan berhasil dibatalkan.'),
+                            backgroundColor: Colors.green),
+                      );
+                      // Kembali ke layar OrderScreen agar daftar list-nya bisa di-refresh
+                      Navigator.pop(context);
+                    }
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Gagal membatalkan pesanan.'),
+                            backgroundColor: Colors.red),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  // Tutup loading indicator
+                  Navigator.of(context).pop();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text('Terjadi kesalahan: $e'),
+                          backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = order['order_items'] as List<dynamic>? ?? [];
@@ -114,7 +205,6 @@ class OrderDetailScreen extends StatelessWidget {
                           fontWeight: FontWeight.bold, fontSize: 14)),
 
                   // Munculkan No Resi Jika Ada
-                  // Munculkan No Resi Jika Ada
                   if (order['tracking_number'] != null &&
                       order['tracking_number'].toString().isNotEmpty) ...[
                     const Divider(height: 24),
@@ -128,7 +218,7 @@ class OrderDetailScreen extends StatelessWidget {
                             fontSize: 16,
                             color: Color(0xFF3F51B5))),
 
-                    // 💡 KODE BARU: TOMBOL LACAK PESANAN
+                    // TOMBOL LACAK PESANAN
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
@@ -262,52 +352,84 @@ class OrderDetailScreen extends StatelessWidget {
         ),
       ),
 
-      // 💡 FITUR BARU: Tombol Bayar Sekarang menempel di bawah (Hanya jika unpaid)
-      bottomNavigationBar: (order['status'] == 'unpaid' &&
-              order['payment_token'] != null)
-          ? Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5)),
-                ],
-              ),
-              child: SafeArea(
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              PaymentScreen(snapToken: order['payment_token']),
-                        ),
-                      ).then((_) {
-                        // Kembali ke layar OrderScreen agar daftar list-nya bisa di-refresh
-                        Navigator.pop(context);
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3F51B5),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      elevation: 0,
-                    ),
-                    child: const Text("Bayar Sekarang",
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold)),
+      // FITUR BARU: Tombol Bayar Sekarang & Batalkan Pesanan menempel di bawah (Hanya jika unpaid)
+      bottomNavigationBar:
+          (order['status'] == 'unpaid' && order['payment_token'] != null)
+              ? Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, -5)),
+                    ],
                   ),
-                ),
-              ),
-            )
-          : null, // Jika status bukan unpaid, tombol tidak akan muncul
+                  child: SafeArea(
+                    child: Column(
+                      mainAxisSize: MainAxisSize
+                          .min, // Agar tinggi container menyesuaikan isi
+                      children: [
+                        // --- TOMBOL BAYAR SEKARANG ---
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PaymentScreen(
+                                      snapToken: order['payment_token']),
+                                ),
+                              ).then((_) {
+                                // Kembali ke layar OrderScreen agar daftar list-nya bisa di-refresh
+                                Navigator.pop(context);
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3F51B5),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: const Text("Bayar Sekarang",
+                                style: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // --- TOMBOL BATALKAN PESANAN ---
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              _showCancelConfirmationDialog(context);
+                            },
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              "Batalkan Pesanan",
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              : null, // Jika status bukan unpaid, tombol tidak akan muncul
     );
   }
 }

@@ -133,4 +133,34 @@ class ProfileService {
       return [];
     }
   }
+
+  // 💡 FUNGSI BARU: Mengganti Password
+  // 💡 FUNGSI UPDATE PASSWORD YANG DIPERBARUI
+  static Future<bool> updatePassword(String currentName, String oldPassword, String newPassword) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    try {
+      final res = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/profile"), 
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          '_method': 'PUT', 
+          'name': currentName, 
+          'old_password': oldPassword, // 💡 Kirim password lama
+          'password': newPassword,     // 💡 Kirim password baru
+        }),
+      );
+
+      // Jika status 200 berarti berhasil, jika 400 (password lama salah) berarti gagal
+      return res.statusCode == 200;
+    } catch (e) {
+      print("Error update password: $e");
+      return false;
+    }
+  }
 }

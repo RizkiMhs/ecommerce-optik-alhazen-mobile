@@ -241,24 +241,94 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             const SizedBox(height: 20),
 
             // --- 2. INFO PRODUK UTAMA ---
+            // --- 2. INFO PRODUK UTAMA ---
             Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20), // Disamakan dengan margin gambar
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    widget.product['name'] ?? 'Nama Produk Tidak Tersedia',
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nama Produk
+                      Expanded(
+                        child: Text(
+                          widget.product['name'] ??
+                              'Nama Produk Tidak Tersedia',
+                          style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // 💡 BADGE STOK MENARIK (Di sebelah kanan nama produk)
+                      Builder(builder: (context) {
+                        // Ambil data stok, default 0 jika null
+                        int stock =
+                            int.tryParse(widget.product['stock'].toString()) ??
+                                0;
+
+                        // Menentukan tema warna berdasarkan jumlah stok
+                        Color bgColor = stock > 5
+                            ? Colors.green.shade50
+                            : (stock > 0
+                                ? Colors.orange.shade50
+                                : Colors.red.shade50);
+                        Color borderColor = stock > 5
+                            ? Colors.green.shade200
+                            : (stock > 0
+                                ? Colors.orange.shade200
+                                : Colors.red.shade200);
+                        Color textColor = stock > 5
+                            ? Colors.green.shade700
+                            : (stock > 0
+                                ? Colors.orange.shade700
+                                : Colors.red.shade700);
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            borderRadius: BorderRadius.circular(
+                                20), // Bentuk pil (melengkung)
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                stock > 0
+                                    ? Icons.inventory_2_outlined
+                                    : Icons.outbox_outlined,
+                                size: 14,
+                                color: textColor,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                stock > 0 ? "Sisa $stock" : "Habis",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
+                  // Harga Produk
                   Text(
                     formatRupiah(totalPrice),
                     style: const TextStyle(
                       fontSize: 22,
                       color: Color(0xFF3F51B5),
-                      fontWeight: FontWeight.w900, // Dipertebal sedikit
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                 ],

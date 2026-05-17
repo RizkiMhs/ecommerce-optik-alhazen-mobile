@@ -11,11 +11,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirmPassword = TextEditingController(); // 💡 Controller Baru
 
   final AuthController _auth = AuthController();
   bool _loading = false;
 
   void _register() async {
+    // 💡 VALIDASI: Pastikan password dan konfirmasi sama sebelum lanjut ke API
+    if (_password.text != _confirmPassword.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Password dan Konfirmasi Password tidak cocok!"),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return; // Hentikan fungsi di sini
+    }
+
     setState(() => _loading = true);
 
     bool success = await _auth.register(
@@ -53,8 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          const Color(0xFFF8F9FE), // Warna background sama dengan Login
+      backgroundColor: const Color(0xFFF8F9FE),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -67,11 +79,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Center(
                   child: Column(
                     children: [
-                      // Memanggil logo yang sudah Anda daftarkan di assets
                       Image.asset(
                         'assets/images/logo.png',
                         height: 60,
-                        // Menambahkan errorBuilder jaga-jaga jika gambar gagal dimuat
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.visibility_outlined,
                                 size: 60, color: Color(0xFF1E3A8A)),
@@ -122,6 +132,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 _buildModernTextField(
                   controller: _password,
                   hintText: "Password",
+                  obscureText: true,
+                ),
+                const SizedBox(height: 16),
+
+                // 💡 --- TEXTFIELD KONFIRMASI PASSWORD ---
+                _buildModernTextField(
+                  controller: _confirmPassword,
+                  hintText: "Confirm Password",
                   obscureText: true,
                 ),
                 const SizedBox(height: 30),

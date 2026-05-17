@@ -1,5 +1,4 @@
-// 
-
+//
 
 import 'package:flutter/material.dart';
 import '../services/profile_service.dart';
@@ -37,13 +36,14 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       _phone.text = widget.data!['phone'] ?? '';
       _address.text = widget.data!['complete_address'] ?? '';
       _postal.text = widget.data!['postal_code'] ?? '';
-      
+
       // Mengisi data kota jika sedang edit
       _selectedCityId = widget.data!['city_id']?.toString();
       // Idealnya kita menyimpan nama kota juga di DB agar bisa ditampilkan saat edit,
       // Untuk sementara kita tampilkan ID-nya jika namanya belum ada
-      _selectedCityName = widget.data!['city_name'] ?? "Kota Terpilih (ID: $_selectedCityId)"; 
-      
+      _selectedCityName =
+          widget.data!['city_name'] ?? "Kota Terpilih (ID: $_selectedCityId)";
+
       _isMain = widget.data!['is_main'] == 1;
     }
   }
@@ -54,14 +54,15 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         _recipient.text.isEmpty ||
         _phone.text.isEmpty ||
         _address.text.isEmpty ||
-        _selectedCityId == null || 
+        _selectedCityId == null ||
         _postal.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Semua field wajib diisi, termasuk Kota!"),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.red,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
       return;
@@ -97,7 +98,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           content: Text("Gagal menyimpan alamat"),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
     }
@@ -125,13 +127,18 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               child: Column(
                 children: [
                   Container(
-                    width: 40, height: 5,
-                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                    width: 40,
+                    height: 5,
+                    decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                   const SizedBox(height: 20),
-                  const Text("Pilih Kota / Kabupaten", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text("Pilih Kota / Kabupaten",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
-                  
+
                   // 💡 KOTAK PENCARIAN REAL-TIME
                   TextField(
                     autofocus: true, // Keyboard otomatis muncul
@@ -140,24 +147,29 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
                     ),
                     onChanged: (value) async {
                       // Hanya mencari jika pengguna sudah mengetik minimal 3 huruf agar API tidak kelebihan beban
                       if (value.length >= 3) {
                         setModalState(() => isSearching = true);
-                        
+
                         // Menembak API Laravel
-                        final results = await ProfileService.searchCities(value);
-                        
-                        print("Jumlah data yang diterima UI: ${results.length} item");
+                        final results =
+                            await ProfileService.searchCities(value);
+
+                        print(
+                            "Jumlah data yang diterima UI: ${results.length} item");
                         setModalState(() {
                           searchResults = results;
                           isSearching = false;
                         });
                       } else {
                         setModalState(() {
-                          searchResults = []; // Kosongkan jika huruf kurang dari 3
+                          searchResults =
+                              []; // Kosongkan jika huruf kurang dari 3
                         });
                       }
                     },
@@ -167,12 +179,16 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                   // 💡 HASIL PENCARIAN
                   Expanded(
                     child: isSearching
-                        ? const Center(child: CircularProgressIndicator(color: Colors.blueAccent))
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                                color: Colors.blueAccent))
                         : searchResults.isEmpty
                             ? Center(
                                 child: Text(
                                   "Ketik nama kota Anda di atas",
-                                  style: TextStyle(color: Colors.grey[500], fontStyle: FontStyle.italic),
+                                  style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontStyle: FontStyle.italic),
                                 ),
                               )
                             : ListView.builder(
@@ -181,12 +197,34 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                                   final city = searchResults[index];
                                   return ListTile(
                                     title: Text(city["name"]),
-                                    trailing: const Icon(Icons.check_circle_outline, size: 20, color: Colors.blueAccent),
+                                    trailing: const Icon(
+                                        Icons.check_circle_outline,
+                                        size: 20,
+                                        color: Colors.blueAccent),
                                     onTap: () {
                                       // Jika diklik, simpan data dan tutup pop-up
                                       setState(() {
                                         _selectedCityId = city["id"].toString();
                                         _selectedCityName = city["name"];
+
+                                        // 💡 BARU: OTOMATIS ISI KODE POS
+                                        // Pertama coba ambil dari properti postal_code (dari Laravel)
+                                        if (city["postal_code"] != null &&
+                                            city["postal_code"]
+                                                .toString()
+                                                .isNotEmpty) {
+                                          _postal.text =
+                                              city["postal_code"].toString();
+                                        } else {
+                                          // Cadangan: Tarik manual 5 angka terakhir dari nama kotanya
+                                          final match = RegExp(r'(\d{5})$')
+                                              .firstMatch(city["name"]
+                                                  .toString()
+                                                  .trim());
+                                          if (match != null) {
+                                            _postal.text = match.group(1)!;
+                                          }
+                                        }
                                       });
                                       Navigator.pop(context);
                                     },
@@ -205,7 +243,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String pageTitle = widget.data != null ? "Edit Alamat" : "Tambah Alamat";
+    final String pageTitle =
+        widget.data != null ? "Edit Alamat" : "Tambah Alamat";
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -215,7 +254,11 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           pageTitle,
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.0),
         ),
       ),
       body: SingleChildScrollView(
@@ -223,13 +266,19 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Informasi Alamat", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey[800])),
+            Text("Informasi Alamat",
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800])),
             const SizedBox(height: 16),
 
-            _input(_label, "Label (Misal: Rumah, Kantor)", icon: Icons.label_outline),
+            _input(_label, "Label (Misal: Rumah, Kantor)",
+                icon: Icons.label_outline),
             _input(_recipient, "Nama Penerima", icon: Icons.person_outline),
-            _input(_phone, "No HP", icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
-            
+            _input(_phone, "No HP",
+                icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+
             // 💡 PERUBAHAN 3: Widget Pemilihan Kota
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
@@ -238,29 +287,40 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText: "Kota / Kabupaten",
-                    labelStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                    labelStyle:
+                        TextStyle(color: Colors.grey[500], fontSize: 14),
                     prefixIcon: Padding(
                       padding: const EdgeInsets.only(bottom: 2.0),
-                      child: Icon(Icons.location_city_outlined, color: Colors.blue[600], size: 22),
+                      child: Icon(Icons.location_city_outlined,
+                          color: Colors.blue[600], size: 22),
                     ),
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),
+                      borderSide:
+                          BorderSide(color: Colors.grey[200]!, width: 1.5),
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        _selectedCityName ?? "Pilih Kota Anda",
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: _selectedCityName != null ? Colors.grey[900] : Colors.grey[500],
+                      // 💡 PERBAIKAN: Bungkus Text dengan Expanded
+                      Expanded(
+                        child: Text(
+                          _selectedCityName ?? "Pilih Kota Anda",
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: _selectedCityName != null ? Colors.grey[900] : Colors.grey[500],
+                          ),
+                          // 💡 PERBAIKAN: Tambahkan batas baris dan efek titik-titik
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 8), // Beri sedikit jarak dengan ikon
                       const Icon(Icons.arrow_drop_down, color: Colors.grey),
                     ],
                   ),
@@ -268,8 +328,11 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
               ),
             ),
 
-            _input(_address, "Alamat Lengkap", maxLines: 3, icon: Icons.location_on_outlined),
-            _input(_postal, "Kode Pos", icon: Icons.markunread_mailbox_outlined, keyboardType: TextInputType.number),
+            _input(_address, "Alamat Lengkap",
+                maxLines: 3, icon: Icons.location_on_outlined),
+            _input(_postal, "Kode Pos",
+                icon: Icons.markunread_mailbox_outlined,
+                keyboardType: TextInputType.number),
 
             const SizedBox(height: 8),
 
@@ -280,18 +343,22 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: SwitchListTile(
-                title: Text("Jadikan alamat utama", style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey[800])),
+                title: Text("Jadikan alamat utama",
+                    style: TextStyle(
+                        fontWeight: FontWeight.w500, color: Colors.grey[800])),
                 activeColor: Colors.blue[600],
                 value: _isMain,
                 onChanged: (val) => setState(() => _isMain = val),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
 
             const SizedBox(height: 32),
 
             _loading
-                ? Center(child: CircularProgressIndicator(color: Colors.blue[800]))
+                ? Center(
+                    child: CircularProgressIndicator(color: Colors.blue[800]))
                 : SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -299,10 +366,16 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                       onPressed: _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[800],
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         elevation: 2,
                       ),
-                      child: const Text("Simpan Alamat", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5)),
+                      child: const Text("Simpan Alamat",
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5)),
                     ),
                   )
           ],
@@ -337,7 +410,8 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
           filled: true,
           fillColor: Colors.white,
           alignLabelWithHint: maxLines > 1,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey[200]!, width: 1.5),

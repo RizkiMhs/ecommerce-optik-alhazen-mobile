@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:optik_alhazen_app/navigation/main_navigation.dart';
 import '../services/order_service.dart';
 import 'payment_screen.dart'; // Untuk tombol Lanjutkan Pembayaran
 import 'order_detail_screen.dart'; // 💡 Tambahkan ini
+import 'home_screen.dart';
 
 class OrderScreen extends StatefulWidget {
   const OrderScreen({Key? key}) : super(key: key);
@@ -55,7 +57,7 @@ class _OrderScreenState extends State<OrderScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 4, // 💡 UBAH 1: Panjang tab diganti dari 3 menjadi 4
+      length: 5, // 💡 UBAH 1: Panjang tab diganti dari 3 menjadi 4
       child: Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
@@ -84,6 +86,7 @@ class _OrderScreenState extends State<OrderScreen> {
               Tab(text: "Diproses"),
               Tab(text: "Dikirim"),
               Tab(text: "Selesai"), // 💡 UBAH 2: Tambahkan Judul Tab ke-4
+              Tab(text: "Dibatalkan"), // 💡 UBAH 5: Tambahkan Tab ke-5
             ],
           ),
         ),
@@ -99,6 +102,8 @@ class _OrderScreenState extends State<OrderScreen> {
                   ]), // 💡 UBAH 3: Tab 3 sekarang khusus 'shipping' saja
                   _buildOrderList(
                       ['completed']), // 💡 UBAH 4: Tab 4 khusus 'completed'
+                  _buildOrderList(
+                      ['cancelled']), // 💡 UBAH 5: Tab 5 khusus 'cancelled'
                 ],
               ),
       ),
@@ -106,6 +111,7 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   // 💡 UI BARU: Empty State yang lebih cantik
+  // 💡 UI BARU: Empty State dengan Tombol "Belanja Sekarang"
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -121,6 +127,36 @@ class _OrderScreenState extends State<OrderScreen> {
           const SizedBox(height: 8),
           Text("Daftar pesanan Anda akan tampil di sini.",
               style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+
+          const SizedBox(height: 24), // 💡 Jarak antara teks dan tombol
+
+          // 💡 TAMBAHAN: Tombol Belanja Sekarang
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                    // 💡 PERBAIKAN: Arahkan ke MainNavigation, BUKAN HomeScreen
+                    builder: (context) => const MainNavigation()),
+                (route) => false,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3F51B5),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              "Belanja Sekarang",
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14),
+            ),
+          ),
         ],
       ),
     );
@@ -197,6 +233,11 @@ class _OrderScreenState extends State<OrderScreen> {
               badgeColor = Colors.green.shade50;
               badgeTextColor = Colors.green.shade700;
               badgeText = "Pesanan Selesai";
+              break;
+            case 'cancelled': // 💡 UBAH 4: Tambahkan warna label untuk status batal
+              badgeColor = Colors.grey.shade200;
+              badgeTextColor = Colors.red.shade700;
+              badgeText = "Dibatalkan";
               break;
             default:
               badgeColor = Colors.grey.shade100;
@@ -363,6 +404,64 @@ class _OrderScreenState extends State<OrderScreen> {
                                     borderRadius: BorderRadius.circular(8)),
                               ),
                               child: const Text("Bayar Sekarang",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+
+                        // 💡 Tombol Bayar HANYA muncul jika status benar-benar 'unpaid'
+                        if (currentStatus == "unpaid" &&
+                            order['payment_token'] != null)
+                          SizedBox(
+                            height: 36,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => PaymentScreen(
+                                          snapToken: order['payment_token'])),
+                                ).then((_) => _loadOrders());
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3F51B5),
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text("Bayar Sekarang",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+
+                        // 💡 TAMBAHAN BARU: Tombol Belanja Sekarang untuk pesanan yang Dibatalkan
+                        if (currentStatus == "cancelled")
+                          SizedBox(
+                            height: 36,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.pushAndRemoveUntil(
+                                  context,
+                                  MaterialPageRoute(
+                                      // 💡 PERBAIKAN: Arahkan ke MainNavigation, BUKAN HomeScreen
+                                      builder: (context) =>
+                                          const MainNavigation()),
+                                  (route) => false,
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(
+                                    0xFF3F51B5), // Warna biru tema Anda
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text("Belanja Sekarang",
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 13,

@@ -184,73 +184,101 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   // --- KOMPONEN UI ---
-
   Widget _buildAddressSection() {
-    return Container(
+    return Material(
       color: Colors.white,
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.location_on, color: Color(0xFF3F51B5)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: isLoadingAddress
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF3F51B5)))
-                : mainAddress != null
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Alamat Pengiriman",
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          Text(
-                              "${mainAddress!['recipient_name']} (${mainAddress!['phone']})",
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold, fontSize: 14)),
-                          const SizedBox(height: 4),
-                          Text(
-                              "${mainAddress!['complete_address']}, Kode Pos: ${mainAddress!['postal_code']}",
-                              style:
-                                  const TextStyle(fontSize: 13, height: 1.4)),
-                        ],
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Alamat Pengiriman",
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
-                          const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const AddAddressScreen()),
-                              );
-                              if (result == true) {
-                                setState(() => isLoadingAddress = true);
-                                fetchUserAddress();
-                              }
-                            },
-                            icon: const Icon(Icons.add_location_alt),
-                            label: const Text("Tambah Alamat Pengiriman"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue[50],
-                              foregroundColor: const Color(0xFF3F51B5),
-                              elevation: 0,
-                            ),
+      // 💡 PERUBAHAN: Tambahkan InkWell agar seluruh kotak alamat bisa diklik
+      child: InkWell(
+        onTap: () async {
+          // Jika masih loading, abaikan klik
+          if (isLoadingAddress) return;
+
+          // Jika alamat sudah ada, arahkan ke halaman edit dengan membawa data
+          if (mainAddress != null) {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                // 💡 Kirim mainAddress ke parameter 'data' untuk memicu mode Edit
+                builder: (context) => AddAddressScreen(data: mainAddress),
+              ),
+            );
+
+            // Refresh alamat dan ongkir jika user selesai mengedit & menyimpan
+            if (result == true) {
+              setState(() => isLoadingAddress = true);
+              fetchUserAddress();
+            }
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.location_on, color: Color(0xFF3F51B5)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: isLoadingAddress
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(color: Color(0xFF3F51B5)))
+                    : mainAddress != null
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Alamat Pengiriman",
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey)),
+                              const SizedBox(height: 4),
+                              Text(
+                                  "${mainAddress!['recipient_name']} (${mainAddress!['phone']})",
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14)),
+                              const SizedBox(height: 4),
+                              Text(
+                                  "${mainAddress!['complete_address']}, Kode Pos: ${mainAddress!['postal_code']}",
+                                  style: const TextStyle(
+                                      fontSize: 13, height: 1.4)),
+                            ],
                           )
-                        ],
-                      ),
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Alamat Pengiriman",
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey)),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const AddAddressScreen()),
+                                  );
+                                  if (result == true) {
+                                    setState(() => isLoadingAddress = true);
+                                    fetchUserAddress();
+                                  }
+                                },
+                                icon: const Icon(Icons.add_location_alt),
+                                label: const Text("Tambah Alamat Pengiriman"),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue[50],
+                                  foregroundColor: const Color(0xFF3F51B5),
+                                  elevation: 0,
+                                ),
+                              )
+                            ],
+                          ),
+              ),
+              // Ikon panah ke kanan agar user tahu ini bisa diklik
+              if (mainAddress != null)
+                const Icon(Icons.chevron_right, color: Colors.grey),
+            ],
           ),
-          if (mainAddress != null)
-            const Icon(Icons.chevron_right, color: Colors.grey),
-        ],
+        ),
       ),
     );
   }
@@ -643,7 +671,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         final result = await OrderService.submitOrder(
                           shippingCost: ongkosKirim,
                           courier: "jne",
-                          paymentMethod: selectedCode, // 💡 Kirim KODE-nya ke Laravel
+                          paymentMethod:
+                              selectedCode, // 💡 Kirim KODE-nya ke Laravel
                           addressData: mainAddress!,
                         );
 
@@ -713,6 +742,5 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           color: Colors.blue[50], borderRadius: BorderRadius.circular(8)),
       child: const Icon(Icons.image_outlined, color: Color(0xFF3F51B5)),
     );
-    
   }
 }

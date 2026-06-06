@@ -48,6 +48,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       "icon": Icons.account_balance,
       "desc": "Dicek otomatis, khusus Bank Syariah Indonesia"
     },
+    // 💡 TAMBAHAN BARU: Metode Pembayaran QRIS
+    {
+      "name": "QRIS (Gopay, OVO, Dana, dll)",
+      "code": "other_qris", // Kode resmi Midtrans untuk QRIS
+      "icon": Icons.qr_code_scanner, // Menggunakan ikon QR Code bawaan Flutter
+      "desc": "Scan QR menggunakan aplikasi e-wallet atau m-banking"
+    },
   ];
   @override
   void initState() {

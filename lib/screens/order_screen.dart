@@ -384,32 +384,32 @@ class _OrderScreenState extends State<OrderScreen> {
                         ),
 
                         // 💡 Tombol Bayar HANYA muncul jika status benar-benar 'unpaid'
-                        if (currentStatus == "unpaid" &&
-                            order['payment_token'] != null)
-                          SizedBox(
-                            height: 36,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (context) => PaymentScreen(
-                                          snapToken: order['payment_token'])),
-                                ).then((_) => _loadOrders());
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3F51B5),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8)),
-                              ),
-                              child: const Text("Bayar Sekarang",
-                                  style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold)),
-                            ),
-                          ),
+                        // if (currentStatus == "unpaid" &&
+                        //     order['payment_token'] != null)
+                        //   SizedBox(
+                        //     height: 36,
+                        //     child: ElevatedButton(
+                        //       onPressed: () {
+                        //         Navigator.push(
+                        //           context,
+                        //           MaterialPageRoute(
+                        //               builder: (context) => PaymentScreen(
+                        //                   snapToken: order['payment_token'])),
+                        //         ).then((_) => _loadOrders());
+                        //       },
+                        //       style: ElevatedButton.styleFrom(
+                        //         backgroundColor: const Color(0xFF3F51B5),
+                        //         elevation: 0,
+                        //         shape: RoundedRectangleBorder(
+                        //             borderRadius: BorderRadius.circular(8)),
+                        //       ),
+                        //       child: const Text("Bayar Sekarang",
+                        //           style: TextStyle(
+                        //               color: Colors.white,
+                        //               fontSize: 13,
+                        //               fontWeight: FontWeight.bold)),
+                        //     ),
+                        //   ),
 
                         // 💡 Tombol Bayar HANYA muncul jika status benar-benar 'unpaid'
                         if (currentStatus == "unpaid" &&

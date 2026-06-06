@@ -2,7 +2,7 @@
 
 class ApiConfig {
   // URL dasar API Anda
-  static const String baseUrl = 'http://10.14.186.133:8000/api';
+  static const String baseUrl = 'http://10.103.92.133:8000/api';
 
   // Daftar endpoint API yang digunakan
   static const String registerEndpoint = '${baseUrl}/register';

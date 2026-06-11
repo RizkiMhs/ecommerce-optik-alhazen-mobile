@@ -38,15 +38,15 @@ class AlhazenAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
 
         // --- 💡 TOMBOL LOGOUT DARURAT ---
-        // Padding(
-        //   padding: const EdgeInsets.only(right: 10),
-        //   child: IconButton(
-        //     tooltip: "Logout Darurat",
-        //     icon: const Icon(Icons.logout_rounded,
-        //         color: Colors.redAccent), // Warna merah agar mudah terlihat
-        //     onPressed: () => _showLogoutDialog(context),
-        //   ),
-        // ),
+        Padding(
+          padding: const EdgeInsets.only(right: 10),
+          child: IconButton(
+            tooltip: "Logout Darurat",
+            icon: const Icon(Icons.logout_rounded,
+                color: Colors.redAccent), // Warna merah agar mudah terlihat
+            onPressed: () => _showLogoutDialog(context),
+          ),
+        ),
       ],
     );
   }

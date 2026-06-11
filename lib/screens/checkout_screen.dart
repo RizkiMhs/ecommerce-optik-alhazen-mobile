@@ -6,6 +6,9 @@ import '../services/address_service.dart';
 import '../services/order_service.dart';
 import '../services/biteship_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../config/api_config.dart';
+
+import '../services/voucher_service.dart'; // 💡 TAMBAHKAN INI
 
 import 'package:optik_alhazen_app/screens/payment_screen.dart';
 
@@ -27,8 +30,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   // State Alamat
   Map<String, dynamic>? mainAddress;
+  List<dynamic> allAddresses = [];
   bool isLoadingAddress = true;
   bool isSubmitting = false;
+
+  // 💡 STATE BARU UNTUK VOUCHER
+  Map<String, dynamic>? appliedVoucher;
+  double discountAmount = 0;
 
   // STATE BARU: Metode Pembayaran
   // 💡 Ubah default metode pembayaran ke BCA
@@ -67,6 +75,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
     if (mounted) {
       setState(() {
+        allAddresses = addresses; // 💡 SIMPAN SEMUA ALAMAT DI SINI
+
         if (addresses.isNotEmpty) {
           mainAddress = addresses.firstWhere(
               (addr) => addr['is_main'] == 1 || addr['is_main'] == true,
@@ -150,12 +160,517 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         });
   }
 
+  // 💡 FUNGSI BARU: Menampilkan daftar alamat ala Shopee
+  // 💡 FUNGSI BARU: Menampilkan daftar alamat ala Shopee (Desain Modern)
+  void _showAddressSelectionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor:
+          Colors.transparent, // Buat transparan agar radius terlihat sempurna
+      builder: (context) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75, // Tinggi 75% layar
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- DRAG HANDLE (Indikator Tarik) ---
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  width: 50,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+
+              // --- HEADER ---
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Pilih Alamat",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A1A), // Warna teks gelap modern
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const AddAddressScreen()),
+                        );
+                        if (result == true) {
+                          setState(() => isLoadingAddress = true);
+                          fetchUserAddress();
+                        }
+                      },
+                      icon: const Icon(Icons.add,
+                          size: 18, color: Color(0xFF3F51B5)),
+                      label: const Text(
+                        "Tambah",
+                        style: TextStyle(
+                            color: Color(0xFF3F51B5),
+                            fontWeight: FontWeight.bold),
+                      ),
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.blue.shade50,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              const Divider(thickness: 1, color: Color(0xFFEEEEEE)),
+
+              // --- DAFTAR ALAMAT ---
+              Expanded(
+                child: allAddresses.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.location_off_rounded,
+                                size: 60, color: Colors.grey[300]),
+                            const SizedBox(height: 16),
+                            Text("Belum ada alamat tersimpan.",
+                                style: TextStyle(
+                                    color: Colors.grey[500], fontSize: 16)),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        itemCount: allAddresses.length,
+                        itemBuilder: (context, index) {
+                          final a = allAddresses[index];
+                          bool isSelected = mainAddress != null &&
+                              mainAddress!['id'] == a['id'];
+                          bool isMain =
+                              a['is_main'] == 1 || a['is_main'] == true;
+
+                          String rawLabel = a['label'] ?? 'Alamat';
+                          String formattedLabel = rawLabel.isNotEmpty
+                              ? '${rawLabel[0].toUpperCase()}${rawLabel.substring(1).toLowerCase()}'
+                              : rawLabel;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () {
+                                setState(() {
+                                  mainAddress = a;
+                                  isLoadingShipping = true;
+                                  ongkosKirim = 0;
+                                });
+                                Navigator.pop(context);
+                                fetchOngkir(a['city_id'].toString());
+                              },
+                              // 💡 Gunakan AnimatedContainer agar perpindahan warna halus
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.blue.shade50
+                                      : Colors.white,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFF3F51B5)
+                                        : Colors.grey.shade200,
+                                    width: isSelected ? 2.0 : 1.0,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: isSelected
+                                      ? [
+                                          BoxShadow(
+                                            color: const Color(0xFF3F51B5)
+                                                .withOpacity(0.15),
+                                            blurRadius: 12,
+                                            offset: const Offset(0, 4),
+                                          )
+                                        ]
+                                      : [
+                                          BoxShadow(
+                                            color:
+                                                Colors.black.withOpacity(0.03),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          )
+                                        ],
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Ikon Lokasi dengan Lingkaran Background
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0xFF3F51B5)
+                                            : Colors.grey.shade100,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.location_on_rounded,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.grey.shade600,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                formattedLabel,
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15,
+                                                  color: isSelected
+                                                      ? const Color(0xFF3F51B5)
+                                                      : Colors.black87,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              if (isMain)
+                                                Container(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFF3F51B5)
+                                                            .withOpacity(0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            6),
+                                                  ),
+                                                  child: const Text(
+                                                    "UTAMA",
+                                                    style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: Color(0xFF3F51B5),
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "${a['recipient_name']}  |  ${a['phone']}",
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            "${a['complete_address']}\nKode Pos: ${a['postal_code']}",
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              height: 1.4,
+                                              color: Colors.grey.shade700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      const Padding(
+                                        padding: EdgeInsets.only(left: 8.0),
+                                        child: Icon(Icons.check_circle_rounded,
+                                            color: Color(0xFF3F51B5), size: 26),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // 💡 FUNGSI BARU: Untuk mengubah angka mentah menjadi format Rupiah rapi
   String formatRupiah(dynamic amount) {
     double parsedAmount = double.tryParse(amount.toString()) ?? 0;
     return NumberFormat.currency(
             locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
         .format(parsedAmount);
+  }
+
+  // 💡 FUNGSI BARU: Menampilkan pop-up gambar resep dengan fitur Zoom
+  void _showPrescriptionImageDialog(String imagePath) {
+    // Membentuk URL lengkap gambar (menghapus '/api' dari baseUrl)
+    final String serverUrl = ApiConfig.baseUrl.replaceAll('/api', '');
+    final String fullUrl = "$serverUrl/storage/$imagePath";
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            // Container Gambar dengan fitur Zoom (InteractiveViewer)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                color: Colors.white,
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 1,
+                  maxScale: 4,
+                  child: Image.network(
+                    fullUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (ctx, child, progress) {
+                      if (progress == null) return child;
+                      return const SizedBox(
+                        height: 300,
+                        width: double.infinity,
+                        child: Center(
+                            child: CircularProgressIndicator(
+                                color: Color(0xFF3F51B5))),
+                      );
+                    },
+                    errorBuilder: (ctx, err, stack) => Container(
+                      height: 200,
+                      width: double.infinity,
+                      color: Colors.grey.shade100,
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image_rounded,
+                              size: 50, color: Colors.grey),
+                          SizedBox(height: 8),
+                          Text("Gagal memuat gambar resep",
+                              style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Tombol Close (X) di pojok kanan atas
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Tutup',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 💡 FUNGSI MEMUNCULKAN DAFTAR VOUCHER
+  // 💡 FUNGSI MEMUNCULKAN DAFTAR VOUCHER
+  void _showVoucherSheet(double subtotalProduk) async {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (BuildContext sheetContext) {
+        return FutureBuilder<List<dynamic>>(
+          future: VoucherService.getAvailableVouchers(),
+          builder: (contextSnapshot, snapshot) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.6,
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Pilih Voucher Diskon",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Center(child: CircularProgressIndicator())
+                  else if (!snapshot.hasData || snapshot.data!.isEmpty)
+                    const Center(
+                        child: Text("Belum ada promo yang tersedia saat ini."))
+                  else
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: snapshot.data!.length,
+                        itemBuilder: (listContext, index) {
+                          final v = snapshot.data![index];
+                          final minBelanja =
+                              double.parse(v['min_purchase'].toString());
+                          final bool isEligible = subtotalProduk >= minBelanja;
+
+                          // 💡 LOGIKA FORMAT DISKON (Sama seperti di Profil)
+                          final String discountType = v['discount_type'];
+                          final double discountValue =
+                              double.parse(v['discount_value'].toString());
+
+                          String discountText = "";
+                          if (discountType == 'percent') {
+                            discountText = "Diskon ${discountValue.toInt()}%";
+                          } else {
+                            discountText =
+                                "Potongan ${formatRupiah(discountValue)}";
+                          }
+
+                          return Opacity(
+                            opacity: isEligible ? 1.0 : 0.5,
+                            child: Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                  side: BorderSide(
+                                    color: Colors.red.shade200,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12)),
+                              color: Colors.red.shade50,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                leading: const Icon(Icons.local_offer,
+                                    color: Colors.redAccent, size: 28),
+                                title: Text(v['code'],
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                        color: Colors.redAccent,
+                                        letterSpacing: 1)),
+
+                                // 💡 SUBTITLE DIPERBARUI: Menampilkan Teks Diskon & Min Belanja
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 6.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(discountText,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                              fontSize: 13)),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                          "Min. belanja ${formatRupiah(minBelanja)}",
+                                          style: TextStyle(
+                                              color: Colors.grey.shade700,
+                                              fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+
+                                trailing: isEligible
+                                    ? ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.redAccent,
+                                            foregroundColor: Colors.white),
+                                        onPressed: () async {
+                                          Navigator.pop(sheetContext);
+
+                                          showDialog(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (dialogContext) =>
+                                                  const Center(
+                                                      child:
+                                                          CircularProgressIndicator(
+                                                              color: Color(
+                                                                  0xFF3F51B5))));
+
+                                          final res = await VoucherService
+                                              .verifyVoucher(
+                                                  v['code'], subtotalProduk);
+
+                                          Navigator.pop(context);
+
+                                          if (res['status'] == 'success') {
+                                            setState(() {
+                                              appliedVoucher =
+                                                  res['data']['voucher'];
+                                              discountAmount = double.parse(
+                                                  res['data']['discount_amount']
+                                                      .toString());
+                                            });
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(const SnackBar(
+                                                    content: Text(
+                                                        "Hore! Voucher berhasil dipakai 🎉"),
+                                                    backgroundColor:
+                                                        Colors.green));
+                                          } else {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(SnackBar(
+                                                    content:
+                                                        Text(res['message']),
+                                                    backgroundColor:
+                                                        Colors.red));
+                                          }
+                                        },
+                                        child: const Text("Pakai"),
+                                      )
+                                    : const Text("Tidak Memenuhi",
+                                        style: TextStyle(
+                                            fontSize: 10, color: Colors.red)),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -167,7 +682,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       return sum + ((base + lens) * item['qty']);
     });
 
-    double grandTotal = subtotalProduk + ongkosKirim;
+    // 💡 UPDATE: Grand Total sekarang dikurangi diskon
+    double grandTotal = (subtotalProduk - discountAmount) + ongkosKirim;
+    if (grandTotal < 0) grandTotal = 0; // Jaga-jaga agar tidak minus
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -180,6 +697,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           _buildOrderItemsSection(),
           const SizedBox(height: 8),
           _buildPrescriptionSection(),
+          // const SizedBox(height: 8),
+          _buildVoucherSection(subtotalProduk),
           const SizedBox(height: 8),
           _buildPaymentMethodSection(),
           const SizedBox(height: 8),
@@ -194,27 +713,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildAddressSection() {
     return Material(
       color: Colors.white,
-      // 💡 PERUBAHAN: Tambahkan InkWell agar seluruh kotak alamat bisa diklik
       child: InkWell(
         onTap: () async {
-          // Jika masih loading, abaikan klik
           if (isLoadingAddress) return;
 
-          // Jika alamat sudah ada, arahkan ke halaman edit dengan membawa data
           if (mainAddress != null) {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                // 💡 Kirim mainAddress ke parameter 'data' untuk memicu mode Edit
-                builder: (context) => AddAddressScreen(data: mainAddress),
-              ),
-            );
-
-            // Refresh alamat dan ongkir jika user selesai mengedit & menyimpan
-            if (result == true) {
-              setState(() => isLoadingAddress = true);
-              fetchUserAddress();
-            }
+            // 💡 PERUBAHAN: Panggil Bottom Sheet untuk memilih alamat, bukan pindah ke AddAddressScreen
+            _showAddressSelectionSheet();
           }
         },
         child: Padding(
@@ -430,7 +935,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           item['cyl_right'] != null ||
           item['cyl_left'] != null ||
           item['pd'] != null ||
-          item['note'] != null;
+          item['note'] != null ||
+          (item['prescription_image'] != null &&
+              item['prescription_image'].toString().isNotEmpty);
     }).toList();
 
     if (itemsWithPrescription.isEmpty) return const SizedBox.shrink();
@@ -472,6 +979,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           color: Color(0xFF3F51B5))),
                   const Divider(
                       height: 16, thickness: 0.5, color: Colors.blueGrey),
+
                   if (item['sph_right'] != null ||
                       item['cyl_right'] != null ||
                       item['axis_right'] != null)
@@ -506,6 +1014,53 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 fontSize: 12,
                                 color: Colors.grey[800],
                                 fontStyle: FontStyle.italic))),
+
+                  // 💡 TOMBOL LIHAT FOTO RESEP YANG SUDAH DIPERCANTIK MALAM INI
+                  if (item['prescription_image'] != null &&
+                      item['prescription_image'].toString().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 14),
+                      child: InkWell(
+                        onTap: () => _showPrescriptionImageDialog(
+                            item['prescription_image']),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Ink(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3F51B5).withOpacity(
+                                0.06), // Background indigo super soft
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: const Color(0xFF3F51B5)
+                                  .withOpacity(0.2), // Border tipis transparan
+                              width: 1,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.image_search_rounded,
+                                size: 18,
+                                color: Color(0xFF3F51B5), // Ikon berwarna tajam
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                "Lihat Foto Resep",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight:
+                                      FontWeight.w800, // Teks tebal & tegas
+                                  color: Color(0xFF3F51B5),
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );
@@ -557,6 +1112,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
+  // 💡 UI TOMBOL VOUCHER DI CHECKOUT
+  Widget _buildVoucherSection(double subtotalProduk) {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.all(16),
+      child: InkWell(
+        onTap: () => _showVoucherSheet(subtotalProduk),
+        child: Row(
+          children: [
+            const Icon(Icons.local_offer_outlined, color: Colors.redAccent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                appliedVoucher != null
+                    ? "Voucher Dipakai: ${appliedVoucher!['code']}"
+                    : "Gunakan Promo / Voucher",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color:
+                        appliedVoucher != null ? Colors.green : Colors.black87),
+              ),
+            ),
+            if (appliedVoucher != null)
+              Text("- ${formatRupiah(discountAmount)} ",
+                  style: const TextStyle(
+                      color: Colors.green, fontWeight: FontWeight.bold)),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPaymentSummarySection(double subtotalProduk) {
     return Container(
       color: Colors.white,
@@ -597,16 +1185,19 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           const Text("Rincian Pembayaran",
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 12),
+
+          // 1. Subtotal Produk
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text("Subtotal Produk",
                   style: TextStyle(color: Colors.grey)),
-              // 💡 FORMAT RUPIAH DITERAPKAN DI SINI
               Text(formatRupiah(subtotalProduk)),
             ],
           ),
           const SizedBox(height: 8),
+
+          // 2. Subtotal Pengiriman
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -616,10 +1207,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ? const Text("Menghitung...",
                       style: TextStyle(
                           color: Colors.grey, fontStyle: FontStyle.italic))
-                  // 💡 FORMAT RUPIAH DITERAPKAN DI SINI
                   : Text(formatRupiah(ongkosKirim)),
             ],
           ),
+
+          // 💡 3. TAMBAHAN BARU: Diskon Voucher (Hanya muncul jika ada diskon)
+          if (discountAmount > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Diskon Voucher",
+                    style: TextStyle(color: Colors.grey)),
+                Text(
+                  "- ${formatRupiah(discountAmount)}",
+                  style: TextStyle(color: const Color.fromARGB(255, 255, 0, 0)),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -671,16 +1277,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ? () async {
                         setState(() => isSubmitting = true);
 
-                        // 💡 Ambil KODE Midtrans dari metode yang dipilih
                         final selectedCode = paymentOptions.firstWhere(
-                            (p) => p['name'] == selectedPaymentMethod)['code'];
+                          (p) => p['name'] == selectedPaymentMethod,
+                        )['code'];
+
+                        final selectedCartIds = widget.selectedItems
+                            .map((item) => item['id'])
+                            .where((id) => id != null)
+                            .toList();
+
+                        print("SELECTED CART IDS:");
+                        print(selectedCartIds);
 
                         final result = await OrderService.submitOrder(
                           shippingCost: ongkosKirim,
                           courier: "jne",
-                          paymentMethod:
-                              selectedCode, // 💡 Kirim KODE-nya ke Laravel
+                          paymentMethod: selectedCode,
                           addressData: mainAddress!,
+                          cartIds: selectedCartIds,
+                          voucherCode: appliedVoucher?['code'],
                         );
 
                         setState(() => isSubmitting = false);

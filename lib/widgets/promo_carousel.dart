@@ -20,8 +20,8 @@ class _PromoCarouselState extends State<PromoCarousel> {
       "tagColor": Colors.orange,
     },
     {
-      "tag": "GRATIS ONGKIR",
-      "title": "Bebas Biaya Kirim\nKe Seluruh Indonesia",
+      "tag": "PRODUK PILIHAN",
+      "title": "Kualitas Terbaik\nUntuk Kebutuhan Anda",
       // 💡 PERBAIKAN PATH GAMBAR
       "image": "assets/images/banner2.jpg",
       "tagColor": Colors.redAccent,

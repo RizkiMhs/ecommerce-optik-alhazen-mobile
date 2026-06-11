@@ -73,6 +73,7 @@ flutter:
   # Tambahkan dua baris ini:
   assets:
     - assets/images/
+    - assets/cities.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

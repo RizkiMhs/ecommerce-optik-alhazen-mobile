@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io'; // Untuk File (gambar resep)
 
 class CartService {
   
@@ -43,24 +44,37 @@ class CartService {
   }
 
   // --- 2. FUNGSI UNTUK MENAMBAH KE KERANJANG (POST) ---
-  static Future<bool> addToCart(Map<String, dynamic> dataKeranjang) async {
+  static Future<bool> addToCart(Map<String, dynamic> dataKeranjang, {File? imageFile}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
 
-    final res = await http.post(
-      Uri.parse("${ApiConfig.baseUrl}/cart"),
-      headers: {
-        'Content-Type': 'application/json', // 🔥 Wajib untuk POST data JSON
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(dataKeranjang),
-    );
+    var request = http.MultipartRequest('POST', Uri.parse("${ApiConfig.baseUrl}/cart"));
+    request.headers.addAll({
+      'Authorization': 'Bearer $token',
+      'Accept': 'application/json',
+    });
+
+    // Masukkan semua data teks ke dalam request.fields
+    dataKeranjang.forEach((key, value) {
+      if (value != null && value.toString().isNotEmpty) {
+        request.fields[key] = value.toString();
+      }
+    });
+
+    // Masukkan file gambar jika ada
+    if (imageFile != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'prescription_image',
+        imageFile.path,
+      ));
+    }
+
+    final streamedResponse = await request.send();
+    final res = await http.Response.fromStream(streamedResponse);
 
     print("ADD CART STATUS: ${res.statusCode}");
     print("ADD CART BODY: ${res.body}");
 
-    // Laravel mengembalikan 201 Created atau 200 OK jika sukses
     if (res.statusCode == 200 || res.statusCode == 201) {
       return true;
     } else {

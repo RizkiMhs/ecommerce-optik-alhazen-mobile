@@ -17,12 +17,12 @@ class ConsultationChatScreen extends StatefulWidget {
 class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   Timer? _timer;
   List<dynamic> messages = [];
   bool isLoading = true;
   bool isSending = false; // 💡 Menandakan jika gambar/pesan sedang di-upload
-  
+
   final ImagePicker _picker = ImagePicker(); // 💡 Instance ImagePicker
 
   @override
@@ -36,7 +36,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
 
   @override
   void dispose() {
-    _timer?.cancel(); 
+    _timer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -44,7 +44,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
 
   Future<void> _fetchMessages({bool isBackgroundRefresh = false}) async {
     final data = await ConsultationService.getMessages();
-    if (!mounted) return; 
+    if (!mounted) return;
 
     bool isNewMessageArrived = data.length > messages.length;
 
@@ -69,7 +69,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
       if (pickedFile != null) {
         File imageFile = File(pickedFile.path);
         // Langsung kirim gambar saat dipilih (tanpa teks)
-        _sendMessage(imageFile: imageFile); 
+        _sendMessage(imageFile: imageFile);
       }
     } catch (e) {
       print("Gagal memilih gambar: $e");
@@ -123,17 +123,17 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
   // --- 💡 UPDATE: Fungsi kirim mendukung teks & gambar ---
   void _sendMessage({File? imageFile}) async {
     final String text = _messageController.text.trim();
-    
+
     // Jangan lakukan apa-apa jika teks kosong dan gambar tidak ada
     if (text.isEmpty && imageFile == null) return;
 
     setState(() { isSending = true; });
 
-    _messageController.clear(); 
-    _scrollToBottom(); 
+    _messageController.clear();
+    _scrollToBottom();
 
     bool success = await ConsultationService.sendMessage(text, imageFile: imageFile);
-    
+
     setState(() { isSending = false; });
 
     if (success) {
@@ -172,11 +172,11 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA), 
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1,
-        automaticallyImplyLeading: false, 
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             Stack(
@@ -239,8 +239,8 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                           final time = _formatTime(msg['created_at']);
 
                           // 💡 Parsing image url
-                          final String? imageUrl = msg['image'] != null && msg['image'].toString().isNotEmpty 
-                              ? msg['image'] 
+                          final String? imageUrl = msg['image'] != null && msg['image'].toString().isNotEmpty
+                              ? msg['image']
                               : null;
 
                           return _buildChatBubble(msg['message'], imageUrl, isAdmin, time);
@@ -279,7 +279,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                           hintText: "Tulis keluhan Anda...",
                           border: InputBorder.none,
                         ),
-                        maxLines: null, 
+                        maxLines: null,
                       ),
                     ),
                   ),
@@ -292,7 +292,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                         color: isSending ? Colors.grey : const Color(0xFF3F51B5),
                         shape: BoxShape.circle,
                       ),
-                      child: isSending 
+                      child: isSending
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                           : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
                     ),
@@ -313,7 +313,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75, 
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -321,8 +321,8 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(isAdmin ? 0 : 16), 
-            bottomRight: Radius.circular(isAdmin ? 16 : 0), 
+            bottomLeft: Radius.circular(isAdmin ? 0 : 16),
+            bottomRight: Radius.circular(isAdmin ? 16 : 0),
           ),
           boxShadow: [
             BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
@@ -331,7 +331,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
         child: Column(
           crossAxisAlignment: isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
           children: [
-            
+
             // 💡 1. Tampilkan Gambar Jika Ada
             if (imageUrl != null)
               Padding(
@@ -340,7 +340,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
                     // Asumsikan Laravel menyimpan path relatif seperti 'chat_images/namafile.jpg'
-                    '${ApiConfig.baseUrl.replaceAll('/api', '')}/storage/$imageUrl', 
+                    '${ApiConfig.baseUrl.replaceAll('/api', '')}/storage/$imageUrl',
                     width: double.infinity,
                     fit: BoxFit.cover,
                     loadingBuilder: (context, child, loadingProgress) {
@@ -370,7 +370,7 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                   height: 1.4,
                 ),
               ),
-              
+
             const SizedBox(height: 4),
             Text(
               time,

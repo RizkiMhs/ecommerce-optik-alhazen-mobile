@@ -881,18 +881,65 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ],
 
             // --- 4. DESKRIPSI PRODUK ---
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Deskripsi",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
+                  // --- HEADER DESKRIPSI ---
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3F51B5).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.description_outlined,
+                            color: Color(0xFF3F51B5), size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        "Deskripsi Produk",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  ),
+
+                  // --- ISI DESKRIPSI ---
                   Text(
-                    widget.product['description'] ?? 'Tidak ada deskripsi',
-                    style: const TextStyle(height: 1.5, color: Colors.black87),
+                    widget.product['description'] ??
+                        'Tidak ada deskripsi tersedia untuk produk ini.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      height:
+                          1.6, // 💡 Membuat jarak antar baris lebih renggang agar mudah dibaca
+                      color: Colors.grey
+                          .shade700, // 💡 Warna abu-abu gelap lebih elegan dari hitam pekat
+                      letterSpacing: 0.2,
+                    ),
                   ),
                 ],
               ),

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import 'dart:io';
 
 class ProfileService {
   static Future<Map<String, dynamic>> getProfile() async {
@@ -163,4 +164,64 @@ class ProfileService {
       return false;
     }
   }
+
+  // 💡 FUNGSI BARU: Update Profil (Nama, Email, Password, Foto) dengan Multipart
+  static Future<bool> updateFullProfile({
+    required String name,
+    required String email,
+    String? phone,
+    String? oldPassword,
+    String? newPassword,
+    File? avatarFile,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    try {
+      // Karena Laravel REST API biasanya strict dengan PUT untuk multipart form-data, 
+      // cara teraman adalah menggunakan metode POST lalu menambahkan field '_method': 'PUT'
+      var request = http.MultipartRequest('POST', Uri.parse("${ApiConfig.baseUrl}/profile"));
+      request.headers.addAll({
+        'Authorization': 'Bearer $token',
+        'Accept': 'application/json',
+      });
+
+      // Tambahkan field teks
+      request.fields['_method'] = 'PUT'; // Triks Laravel
+      request.fields['name'] = name;
+      request.fields['email'] = email;
+
+      // 💡 TAMBAHAN BARU: Kirim phone ke server jika ada
+      if (phone != null) {
+        request.fields['phone'] = phone;
+      }
+      
+      if (oldPassword != null && oldPassword.isNotEmpty) {
+        request.fields['old_password'] = oldPassword;
+      }
+      if (newPassword != null && newPassword.isNotEmpty) {
+        request.fields['password'] = newPassword;
+      }
+
+      // Tambahkan file gambar jika ada
+      if (avatarFile != null) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'avatar',
+          avatarFile.path,
+        ));
+      }
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
+
+      print("UPDATE PROFILE STATUS: ${res.statusCode}");
+      print("UPDATE PROFILE BODY: ${res.body}");
+
+      return res.statusCode == 200;
+    } catch (e) {
+      print("Error update full profile: $e");
+      return false;
+    }
+  }
 }
+

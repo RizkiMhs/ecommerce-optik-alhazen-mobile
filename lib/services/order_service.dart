@@ -19,6 +19,7 @@ class OrderService {
         },
         body: {
           'destination_city_id': destinationCityId,
+          // 'destination_city_id': cityId,
         },
       );
 
@@ -38,58 +39,58 @@ class OrderService {
     }
   }
 
-  // 💡 FUNGSI BARU: Mengirim data Checkout ke Laravel
   static Future<Map<String, dynamic>> submitOrder({
-    required double shippingCost,
-    required String courier,
-    required String paymentMethod,
-    required Map<String, dynamic> addressData,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
+  required double shippingCost,
+  required String courier,
+  required String paymentMethod,
+  required Map<String, dynamic> addressData,
+  required List<dynamic> cartIds,
+  String? voucherCode,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
 
-    // 💡 1. KITA BUNGKUS DATANYA DULU
-    final requestBody = {
-      "shipping_cost": shippingCost,
-      "courier": courier,
-      "payment_method": paymentMethod,
-      "recipient_name": addressData['recipient_name'],
-      "phone": addressData['phone'],
-      "full_address":
-          "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
-    };
+  final requestBody = {
+    "shipping_cost": shippingCost,
+    "courier": courier,
+    "payment_method": paymentMethod,
+    "recipient_name": addressData['recipient_name'],
+    "phone": addressData['phone'],
+    "full_address":
+        "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
+    "cart_ids": cartIds,
+    'voucher_code': voucherCode, // 💡 KIRIM KODE VOUCHER KE LARAVEL
+  };
 
-    // 💡 2. CETAK KE CONSOLE FLUTTER
-    print("====== DATA DARI FLUTTER ======");
-    print(jsonEncode(requestBody));
+  print("====== DATA DARI FLUTTER ======");
+  print(jsonEncode(requestBody));
+  print("===============================");
+
+  try {
+    final res = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/checkout'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(requestBody),
+    );
+
+    print("====== RESPONSE CHECKOUT ======");
+    print("Status Code: ${res.statusCode}");
+    print("Body: ${res.body}");
     print("===============================");
 
-    try {
-      final res = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/checkout'),
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "shipping_cost": shippingCost,
-          "courier": courier,
-          "payment_method":
-              paymentMethod, // Jika di Laravel belum ada tangkapan ini, tambahkan ya
-          "recipient_name": addressData['recipient_name'],
-          "phone": addressData['phone'],
-          "full_address":
-              "${addressData['complete_address']}, Kode Pos: ${addressData['postal_code']}",
-        }),
-      );
-
-      return jsonDecode(res.body);
-    } catch (e) {
-      print("Error submit order: $e");
-      return {'status': 'error', 'message': 'Terjadi kesalahan jaringan'};
-    }
+    return jsonDecode(res.body);
+  } catch (e) {
+    print("Error submit order: $e");
+    return {
+      'status': 'error',
+      'message': 'Terjadi kesalahan jaringan',
+    };
   }
+}
 
   // 💡 FUNGSI BARU: Mengambil daftar pesanan dari Laravel
   static Future<List<dynamic>> fetchOrders() async {

@@ -11,13 +11,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
-  final _confirmPassword = TextEditingController(); // 💡 Controller Baru
+  final _confirmPassword = TextEditingController();
 
   final AuthController _auth = AuthController();
   bool _loading = false;
 
+  // 💡 TAMBAHAN BARU: Variabel state untuk melacak status mata/password
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   void _register() async {
-    // 💡 VALIDASI: Pastikan password dan konfirmasi sama sebelum lanjut ke API
     if (_password.text != _confirmPassword.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -26,7 +29,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      return; // Hentikan fungsi di sini
+      return;
     }
 
     setState(() => _loading = true);
@@ -132,15 +135,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 _buildModernTextField(
                   controller: _password,
                   hintText: "Password",
-                  obscureText: true,
+                  obscureText: _obscurePassword, // Gunakan variabel state
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey[400],
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
 
-                // 💡 --- TEXTFIELD KONFIRMASI PASSWORD ---
+                // --- TEXTFIELD KONFIRMASI PASSWORD ---
                 _buildModernTextField(
                   controller: _confirmPassword,
                   hintText: "Confirm Password",
-                  obscureText: true,
+                  obscureText:
+                      _obscureConfirmPassword, // Gunakan variabel state
+                  suffixIcon: Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: IconButton(
+                      icon: Icon(
+                        _obscureConfirmPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey[400],
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureConfirmPassword = !_obscureConfirmPassword;
+                        });
+                      },
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 30),
 
@@ -211,6 +247,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required TextEditingController controller,
     required String hintText,
     required bool obscureText,
+    Widget? suffixIcon, // 💡 TAMBAHAN BARU: Parameter untuk ikon kanan
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -231,6 +268,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         decoration: InputDecoration(
           hintText: hintText,
           hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+          suffixIcon: suffixIcon, // 💡 Pasang ikon di sini
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(color: Colors.grey[200]!, width: 1),

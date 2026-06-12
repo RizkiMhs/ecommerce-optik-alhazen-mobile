@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:intl/intl.dart';
 
+import 'dart:io'; // 💡 Tambahkan ini untuk handle File
+import 'package:image_picker/image_picker.dart'; // 💡 Tambahkan package ini
+
 // Sesuaikan dengan path project kamu
 import 'package:optik_alhazen_app/config/api_config.dart';
 import 'package:optik_alhazen_app/screens/cart_screen.dart';
@@ -26,12 +29,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   // STATE UNTUK INDIKATOR CAROUSEL GAMBAR
   int _currentImageIndex = 0;
 
+  int _cartItemCount = 0;
+
   // --- STATE UNTUK RESEP MATA ---
   final TextEditingController _sphRightCtrl = TextEditingController();
   final TextEditingController _cylRightCtrl = TextEditingController();
+  final TextEditingController _axisRightCtrl =
+      TextEditingController(); // 💡 AXIS KANAN
+
   final TextEditingController _sphLeftCtrl = TextEditingController();
   final TextEditingController _cylLeftCtrl = TextEditingController();
-  final TextEditingController _pdCtrl = TextEditingController();
+  final TextEditingController _axisLeftCtrl =
+      TextEditingController(); // 💡 AXIS KIRI
+
   final TextEditingController _noteCtrl = TextEditingController();
 
   // STATE UNTUK LOADING TOMBOL KERANJANG
@@ -41,9 +51,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void dispose() {
     _sphRightCtrl.dispose();
     _cylRightCtrl.dispose();
+    _axisRightCtrl.dispose();
+
     _sphLeftCtrl.dispose();
     _cylLeftCtrl.dispose();
-    _pdCtrl.dispose();
+    _axisLeftCtrl.dispose();
+
     _noteCtrl.dispose();
     super.dispose();
   }
@@ -52,6 +65,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     loadLensOptions();
+    _fetchCartCount(); // Ambil jumlah item di keranjang saat halaman dibuka
+  }
+
+  // 💡 FUNGSI MENGAMBIL JUMLAH KERANJANG
+  Future<void> _fetchCartCount() async {
+    try {
+      final carts = await CartService.getCartItems();
+      if (mounted) {
+        setState(() {
+          _cartItemCount = carts.length;
+        });
+      }
+    } catch (e) {
+      print("Error fetch cart count: $e");
+    }
   }
 
   void loadLensOptions() async {
@@ -66,6 +94,258 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return NumberFormat.currency(
             locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0)
         .format(parsedAmount);
+  }
+
+  // 💡 STATE BARU UNTUK FOTO RESEP
+  File? _prescriptionImage;
+  final ImagePicker _picker = ImagePicker();
+
+  // 💡 FUNGSI UNTUK MEMILIH GAMBAR
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: source,
+        imageQuality: 80, // Kompres agar tidak terlalu berat saat upload
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _prescriptionImage = File(pickedFile.path);
+        });
+      }
+    } catch (e) {
+      debugPrint("Gagal mengambil gambar: $e");
+    }
+  }
+
+  // 💡 UI: WIDGET UNTUK AREA PICKER GAMBAR
+  Widget _buildImagePickerArea() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Text(
+          "Atau Upload Foto Kartu Resep",
+          style: TextStyle(
+              fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black54),
+        ),
+        const SizedBox(height: 10),
+        if (_prescriptionImage != null)
+          // Tampilan jika gambar sudah dipilih
+          Stack(
+            children: [
+              Container(
+                height: 180,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(_prescriptionImage!, fit: BoxFit.cover),
+                ),
+              ),
+              Positioned(
+                right: 8,
+                top: 8,
+                child: GestureDetector(
+                  onTap: () => setState(() => _prescriptionImage = null),
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                        color: Colors.red, shape: BoxShape.circle),
+                    child:
+                        const Icon(Icons.close, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          // Tampilan tombol upload jika belum ada gambar
+          Row(
+            children: [
+              Expanded(
+                child: _buildImageSourceTile(
+                  icon: Icons.camera_alt_rounded,
+                  label: "Kamera",
+                  onTap: () => _pickImage(ImageSource.camera),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildImageSourceTile(
+                  icon: Icons.photo_library_rounded,
+                  label: "Galeri",
+                  onTap: () => _pickImage(ImageSource.gallery),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildImageSourceTile(
+      {required IconData icon,
+      required String label,
+      required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.grey.shade300,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF3F51B5)),
+            const SizedBox(height: 4),
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 💡 FUNGSI HELPER: Membuat kotak input resep yang modern & ramah keyboard
+  Widget _buildResepField(String label, TextEditingController controller) {
+    return TextField(
+      controller: controller,
+      // 💡 PENTING: Memaksa keyboard angka + simbol minus/plus muncul di HP
+      keyboardType:
+          const TextInputType.numberWithOptions(signed: true, decimal: true),
+      textAlign: TextAlign.center,
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        floatingLabelBehavior: FloatingLabelBehavior.always,
+        hintText: "0.00",
+        hintStyle:
+            TextStyle(color: Colors.grey[400], fontWeight: FontWeight.normal),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF3F51B5), width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  // 💡 FUNGSI HELPER: Menampilkan Pop-up Panduan Resep Kacamata
+  void _showPrescriptionGuide() {
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.help_outline_rounded, color: Color(0xFF3F51B5)),
+                  SizedBox(width: 8),
+                  Text("Panduan Resep",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildGuideItem("SPH (Sphere / Sferis)",
+                        "Kekuatan lensa utama. Isi dengan angka minus (-) untuk rabun jauh, atau plus (+) untuk rabun dekat.\nContoh: -1.50 atau +2.00"),
+                    _buildGuideItem("CYL (Cylinder / Silinder)",
+                        "Kekuatan lensa untuk mengoreksi mata silinder. Biasanya ditulis dengan angka minus.\nContoh: -0.50"),
+                    _buildGuideItem("AXIS (Aksis / Derajat)",
+                        "Menunjukkan derajat kemiringan silinder (berkisar antara 1 hingga 180). Kolom ini WAJIB diisi jika Anda memiliki nilai CYL."),
+
+                    // 💡 TAMBAHAN BARU: Panduan Upload Foto Resep
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Divider(color: Colors.black12),
+                    ),
+                    _buildGuideItem("Upload Foto Resep (Opsional)",
+                        "Jika Anda bingung membaca atau mengisi angka resep di atas, Anda cukup memfoto dan mengunggah (upload) surat/kartu resep dari dokter mata atau optik. Tim kami yang akan membacanya untuk Anda."),
+
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.shade200)),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline_rounded,
+                              color: Colors.orange.shade800, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                                "Kosongkan seluruh form resep ini jika Anda memiliki mata normal (Plano) atau hanya ingin membeli bingkainya saja.",
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.shade900,
+                                    height: 1.4)),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Mengerti",
+                      style: TextStyle(
+                          color: Color(0xFF3F51B5),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                )
+              ],
+            ));
+  }
+
+  // Widget pembantu untuk membungkus teks penjelasan panduan
+  Widget _buildGuideItem(String title, String desc) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                  fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(desc,
+              style: TextStyle(
+                  fontSize: 13, color: Colors.grey.shade700, height: 1.4)),
+        ],
+      ),
+    );
   }
 
   @override
@@ -98,8 +378,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 💡 APP BAR BARU SESUAI REFERENSI GAMBAR
-      // 💡 APP BAR BARU SESUAI REFERENSI GAMBAR
+      // --- APP BAR ---
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -117,7 +396,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           padding: const EdgeInsets.only(left: 16.0, top: 8, bottom: 8),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.grey.shade100, // Background bulat abu-abu
+              color: Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
             child: IconButton(
@@ -132,20 +411,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             padding: const EdgeInsets.only(right: 16.0, top: 8, bottom: 8),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.grey.shade100, // Background bulat abu-abu
+                color: Colors.grey.shade100,
                 shape: BoxShape.circle,
               ),
               child: IconButton(
-                // 💡 UBAH DI SINI: Ikon hati diganti jadi keranjang
-                icon: const Icon(Icons.shopping_cart_outlined,
-                    size: 20, color: Colors.black87),
-                onPressed: () {
-                  // TODO: Tambahkan navigasi ke CartScreen Anda di sini
-                  // Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen()));
-                  Navigator.push(
+                // 💡 PERBAIKAN: Bungkus Icon dengan Badge
+                icon: Badge(
+                  isLabelVisible: _cartItemCount > 0, // Hanya muncul jika > 0
+                  label: Text(_cartItemCount.toString()),
+                  child: const Icon(Icons.shopping_cart_outlined,
+                      size: 20, color: Colors.black87),
+                ),
+                onPressed: () async {
+                  // 💡 PERBAIKAN: Gunakan await agar fungsi menunggu user kembali
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const CartScreen()),
                   );
+                  // 💡 Panggil fungsi refresh angkanya di sini
+                  _fetchCartCount();
                 },
               ),
             ),
@@ -157,9 +441,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 10), // Jarak sedikit dari AppBar
+            const SizedBox(height: 10),
 
-            // --- 1. SLIDER GAMBAR (DESAIN BARU) ---
+            // --- 1. SLIDER GAMBAR ---
             if (images.isNotEmpty)
               Column(
                 children: [
@@ -169,19 +453,15 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         builder: (BuildContext context) {
                           return Container(
                             width: double.infinity,
-                            // 💡 Margin besar di kiri-kanan sesuai gambar
                             margin: const EdgeInsets.symmetric(horizontal: 20),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(
-                                  24), // Melengkung lebih halus
-                              color: const Color(
-                                  0xFFEEF2F6), // Warna biru keabu-abuan pucat
+                              borderRadius: BorderRadius.circular(24),
+                              color: const Color(0xFFEEF2F6),
                             ),
                             clipBehavior: Clip.hardEdge,
                             child: Image.network(
                               url,
-                              fit: BoxFit
-                                  .cover, // Jika gambarnya transparan, background di atas akan tembus
+                              fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) {
                                 return const Center(
                                   child: Icon(Icons.broken_image,
@@ -194,7 +474,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       );
                     }).toList(),
                     options: CarouselOptions(
-                      height: 320, // Dipertinggi sedikit agar proporsional
+                      height: 320,
                       viewportFraction: 1.0,
                       autoPlay: true,
                       onPageChanged: (index, reason) {
@@ -241,7 +521,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             const SizedBox(height: 20),
 
             // --- 2. INFO PRODUK UTAMA ---
-            // --- 2. INFO PRODUK UTAMA ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
@@ -263,14 +542,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       const SizedBox(width: 12),
 
-                      // 💡 BADGE STOK MENARIK (Di sebelah kanan nama produk)
+                      // Badge Stok
                       Builder(builder: (context) {
-                        // Ambil data stok, default 0 jika null
                         int stock =
                             int.tryParse(widget.product['stock'].toString()) ??
                                 0;
 
-                        // Menentukan tema warna berdasarkan jumlah stok
                         Color bgColor = stock > 5
                             ? Colors.green.shade50
                             : (stock > 0
@@ -292,8 +569,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: bgColor,
-                            borderRadius: BorderRadius.circular(
-                                20), // Bentuk pil (melengkung)
+                            borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: borderColor),
                           ),
                           child: Row(
@@ -362,9 +638,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           onTap: () {
                             setState(() {
                               if (isSelected) {
-                                selectedLens = null; // Batalkan pilihan
+                                selectedLens = null;
                               } else {
-                                selectedLens = lens; // Pilih lensa
+                                selectedLens = lens;
                               }
                             });
                           },
@@ -438,92 +714,163 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
               const SizedBox(height: 24),
 
-              // Seksi Input Resep
+              // --- SEKSI INPUT RESEP ---
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Resep Kacamata (Opsional)",
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    // 💡 TOMBOL PANDUAN
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Resep Kacamata",
+                            style: TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        InkWell(
+                          onTap:
+                              _showPrescriptionGuide, // Memanggil fungsi panduan
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.help_outline_rounded,
+                                    size: 16, color: Color(0xFF3F51B5)),
+                                SizedBox(width: 4),
+                                Text("Panduan",
+                                    style: TextStyle(
+                                        color: Color(0xFF3F51B5),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
+
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.03),
-                        border: Border.all(color: Colors.blue.withOpacity(0.2)),
-                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.white,
+                        border: Border.all(color: Colors.grey.shade200),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          )
+                        ],
                       ),
                       child: Column(
                         children: [
+                          // --- MATA KANAN (R) ---
                           Row(
                             children: [
-                              const SizedBox(
-                                  width: 40,
-                                  child: Text("R (Kanan)",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold))),
-                              const SizedBox(width: 10),
+                              Container(
+                                width: 40,
+                                height: 45,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text("R",
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF3F51B5))),
+                              ),
+                              const SizedBox(width: 8),
                               Expanded(
-                                  child: TextField(
-                                      controller: _sphRightCtrl,
-                                      decoration: const InputDecoration(
-                                          labelText: "SPH (Min/Plus)",
-                                          isDense: true))),
-                              const SizedBox(width: 10),
+                                  child:
+                                      _buildResepField("SPH", _sphRightCtrl)),
+                              const SizedBox(width: 8),
                               Expanded(
-                                  child: TextField(
-                                      controller: _cylRightCtrl,
-                                      decoration: const InputDecoration(
-                                          labelText: "CYL (Silinder)",
-                                          isDense: true))),
+                                  child:
+                                      _buildResepField("CYL", _cylRightCtrl)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child:
+                                      _buildResepField("AXIS", _axisRightCtrl)),
                             ],
                           ),
+
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Divider(
+                                color: Colors.grey.shade200, thickness: 1),
+                          ),
+
+                          // --- MATA KIRI (L) ---
+                          Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 45,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade50,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Text("L",
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w900,
+                                        color: Color(0xFF3F51B5))),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: _buildResepField("SPH", _sphLeftCtrl)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: _buildResepField("CYL", _cylLeftCtrl)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child:
+                                      _buildResepField("AXIS", _axisLeftCtrl)),
+                            ],
+                          ),
+
                           const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              const SizedBox(
-                                  width: 40,
-                                  child: Text("L (Kiri)",
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold))),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                  child: TextField(
-                                      controller: _sphLeftCtrl,
-                                      decoration: const InputDecoration(
-                                          labelText: "SPH (Min/Plus)",
-                                          isDense: true))),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                  child: TextField(
-                                      controller: _cylLeftCtrl,
-                                      decoration: const InputDecoration(
-                                          labelText: "CYL (Silinder)",
-                                          isDense: true))),
-                            ],
+
+                          // --- CATATAN TAMBAHAN ---
+                          TextField(
+                            controller: _noteCtrl,
+                            decoration: InputDecoration(
+                              labelText: "Catatan Tambahan (Bila ada)",
+                              labelStyle: TextStyle(
+                                  color: Colors.grey.shade600, fontSize: 13),
+                              prefixIcon: Icon(Icons.edit_note_rounded,
+                                  color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: Color(0xFF3F51B5), width: 1.5),
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                  flex: 1,
-                                  child: TextField(
-                                      controller: _pdCtrl,
-                                      decoration: const InputDecoration(
-                                          labelText: "PD (Jarak Pupil)",
-                                          isDense: true))),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                  flex: 2,
-                                  child: TextField(
-                                      controller: _noteCtrl,
-                                      decoration: const InputDecoration(
-                                          labelText: "Catatan Tambahan",
-                                          isDense: true))),
-                            ],
-                          ),
+                          _buildImagePickerArea(),
                         ],
                       ),
                     ),
@@ -585,21 +932,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       _isLoading = true;
                     });
 
+                    // 💡 PAYLOAD: PD sudah dihapus, AXIS ditambahkan
                     final Map<String, dynamic> payloadKeranjang = {
                       'product_id': widget.product['id'],
                       'qty': 1,
                       'lens_type_id': selectedLens?['id'],
                       'sph_right': _sphRightCtrl.text,
                       'cyl_right': _cylRightCtrl.text,
+                      'axis_right': _axisRightCtrl.text,
                       'sph_left': _sphLeftCtrl.text,
                       'cyl_left': _cylLeftCtrl.text,
-                      'pd': _pdCtrl.text,
+                      'axis_left': _axisLeftCtrl.text,
                       'note': _noteCtrl.text,
                     };
 
-                    bool success =
-                        await CartService.addToCart(payloadKeranjang);
-
+                    // 💡 Kirim payload beserta file gambar
+                    bool success = await CartService.addToCart(payloadKeranjang,
+                        imageFile: _prescriptionImage // Pass filenya di sini
+                        );
                     setState(() {
                       _isLoading = false;
                     });

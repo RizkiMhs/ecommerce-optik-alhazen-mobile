@@ -1,8 +1,14 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:optik_alhazen_app/screens/add_address_screen.dart';
 import 'package:optik_alhazen_app/screens/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/profile_service.dart';
+
+import 'package:flutter/services.dart'; // Untuk fitur copy kode voucher
+import 'package:intl/intl.dart'; // Untuk format Rupiah
+import '../services/voucher_service.dart'; // Memanggil API Voucher
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -41,11 +47,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 💡 LOGIKA BARU: Mengambil nomor telepon dari tabel alamat
   String get _displayPhone {
     if (addresses.isEmpty) return 'Tidak ada nomor telepon';
     try {
-      // Cari alamat utama (is_main == 1), jika tidak ada, ambil alamat pertama saja
       final mainAddr = addresses.firstWhere(
         (a) => a['is_main'] == 1,
         orElse: () => addresses[0],
@@ -56,8 +60,382 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // 💡 FUNGSI BARU: Menampilkan Dialog Ganti Password
-  // 💡 FUNGSI DIALOG GANTI PASSWORD YANG DIPERBARUI
+  // 💡 FUNGSI BARU: Menampilkan Daftar Voucher Aktif di Profil
+  void _showVouchersSheet() {
+    showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.65,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- DRAG HANDLE ---
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 50,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+
+                // --- HEADER ---
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Text("Promo & Voucher Aktif",
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+                const Divider(thickness: 1, color: Color(0xFFEEEEEE)),
+
+                // --- LIST VOUCHER (DARI API) ---
+                Expanded(
+                  child: FutureBuilder<List<dynamic>>(
+                      future: VoucherService.getAvailableVouchers(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Color(0xFF3F51B5)));
+                        } else if (!snapshot.hasData ||
+                            snapshot.data!.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.local_offer_outlined,
+                                    size: 60, color: Colors.grey[300]),
+                                const SizedBox(height: 16),
+                                Text("Belum ada promo saat ini.",
+                                    style: TextStyle(
+                                        color: Colors.grey[500], fontSize: 16)),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 10),
+                          itemCount: snapshot.data!.length,
+                          itemBuilder: (context, index) {
+                            final v = snapshot.data![index];
+                            final minBelanja =
+                                double.parse(v['min_purchase'].toString());
+
+                            // Format Rupiah untuk Min. Belanja
+                            final formattedMinBelanja = NumberFormat.currency(
+                                    locale: 'id_ID',
+                                    symbol: 'Rp ',
+                                    decimalDigits: 0)
+                                .format(minBelanja);
+
+                            // 💡 LOGIKA BARU: Menentukan Tampilan Nominal/Persen Diskon
+                            final String discountType = v['discount_type'];
+                            final double discountValue =
+                                double.parse(v['discount_value'].toString());
+
+                            String discountText = "";
+                            if (discountType == 'percent') {
+                              // Jika diskon berupa persen (menghilangkan angka desimal .00)
+                              discountText = "Diskon ${discountValue.toInt()}%";
+                            } else {
+                              // Jika diskon berupa potongan harga (diformat ke Rupiah)
+                              final formattedDiscount = NumberFormat.currency(
+                                      locale: 'id_ID',
+                                      symbol: 'Rp ',
+                                      decimalDigits: 0)
+                                  .format(discountValue);
+                              discountText = "Potongan $formattedDiscount";
+                            }
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                  side: BorderSide(
+                                    color: Colors.red.shade200,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12)),
+                              color: Colors.red.shade50,
+                              elevation: 0,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical:
+                                        8), // Padding vertikal sedikit ditambah
+                                leading: const Icon(Icons.local_offer,
+                                    color: Colors.redAccent, size: 28),
+                                title: Text(v['code'],
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                        color: Colors.redAccent,
+                                        letterSpacing: 1)),
+
+                                // 💡 TAMPILAN SUBTITLE YANG BARU (Berisi Diskon & Syarat)
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 6.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(discountText,
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                              fontSize: 13)),
+                                      const SizedBox(height: 2),
+                                      Text("Min. belanja $formattedMinBelanja",
+                                          style: TextStyle(
+                                              color: Colors.grey.shade700,
+                                              fontSize: 12)),
+                                    ],
+                                  ),
+                                ),
+
+                                // trailing: OutlinedButton(
+                                //   onPressed: () {
+                                //     // 💡 Fitur Salin Kode
+                                //     Clipboard.setData(
+                                //         ClipboardData(text: v['code']));
+                                //     Navigator.pop(context); // Tutup sheet
+                                //     ScaffoldMessenger.of(context).showSnackBar(
+                                //       SnackBar(
+                                //           content: Text(
+                                //               "Kode ${v['code']} berhasil disalin!"),
+                                //           backgroundColor: Colors.green),
+                                //     );
+                                //   },
+                                //   style: OutlinedButton.styleFrom(
+                                //       side: const BorderSide(
+                                //           color: Colors.redAccent),
+                                //       shape: RoundedRectangleBorder(
+                                //           borderRadius:
+                                //               BorderRadius.circular(8)),
+                                //       minimumSize: const Size(60, 32),
+                                //       padding: const EdgeInsets.symmetric(
+                                //           horizontal: 12)),
+                                //   child: const Text("SALIN",
+                                //       style: TextStyle(
+                                //           color: Colors.redAccent,
+                                //           fontSize: 12,
+                                //           fontWeight: FontWeight.bold)),
+                                // ),
+                              ),
+                            );
+                          },
+                        );
+                      }),
+                ),
+              ],
+            ),
+          );
+        });
+  }
+
+  // 💡 FUNGSI BARU: Dialog Edit Profil Dasar (Nama, Email, dan Foto)
+  void _showEditProfileDialog() {
+    final TextEditingController nameController =
+        TextEditingController(text: user!['name']);
+    final TextEditingController emailController =
+        TextEditingController(text: user!['email']);
+    // 💡 1. TAMBAHKAN CONTROLLER TELEPON
+    // 💡 PERBAIKAN: Ambil HP dari tabel users. Jika kosong, tarik dari alamat.
+    String initialPhone =
+        (user!['phone'] != null && user!['phone'].toString().isNotEmpty)
+            ? user!['phone'].toString()
+            : (_displayPhone != 'Tidak ada nomor telepon' ? _displayPhone : '');
+    final TextEditingController phoneController =
+        TextEditingController(text: initialPhone);
+
+    File? newAvatar;
+    bool isUpdating = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("Edit Profil",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // AREA FOTO PROFIL
+                GestureDetector(
+                  onTap: () async {
+                    final picker = ImagePicker();
+                    final pickedFile = await picker.pickImage(
+                        source: ImageSource.gallery, imageQuality: 80);
+                    if (pickedFile != null) {
+                      setStateDialog(() {
+                        newAvatar = File(pickedFile.path);
+                      });
+                    }
+                  },
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          shape: BoxShape.circle,
+                        ),
+                        child: CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.white,
+                          backgroundImage: newAvatar != null
+                              ? FileImage(newAvatar!)
+                              : (user!['avatar_url'] != null
+                                  ? NetworkImage(user!['avatar_url'])
+                                  : null) as ImageProvider?,
+                          child:
+                              newAvatar == null && user!['avatar_url'] == null
+                                  ? const Icon(Icons.person,
+                                      size: 40, color: Colors.grey)
+                                  : null,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                            color: Color(0xFF3F51B5), shape: BoxShape.circle),
+                        child: const Icon(Icons.camera_alt,
+                            color: Colors.white, size: 14),
+                      )
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text("Ketuk foto untuk mengubah",
+                    style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const SizedBox(height: 24),
+
+                // AREA NAMA
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: "Nama Lengkap",
+                    prefixIcon:
+                        const Icon(Icons.person_outline, color: Colors.grey),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // AREA EMAIL
+                TextField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    labelText: "Email",
+                    prefixIcon:
+                        const Icon(Icons.email_outlined, color: Colors.grey),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // 💡 2. TAMBAHKAN AREA NOMOR TELEPON DI BAWAH EMAIL
+                TextField(
+                  controller: phoneController,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: "Nomor Telepon",
+                    prefixIcon:
+                        const Icon(Icons.phone_outlined, color: Colors.grey),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isUpdating ? null : () => Navigator.pop(context),
+              child: const Text("Batal", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3F51B5),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: isUpdating
+                  ? null
+                  : () async {
+                      if (nameController.text.isEmpty ||
+                          emailController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text("Nama dan Email tidak boleh kosong!"),
+                                backgroundColor: Colors.red));
+                        return;
+                      }
+
+                      setStateDialog(() => isUpdating = true);
+
+                      bool success = await ProfileService.updateFullProfile(
+                        name: nameController.text,
+                        email: emailController.text,
+                        phone: phoneController.text,
+                        avatarFile: newAvatar,
+                      );
+
+                      setStateDialog(() => isUpdating = false);
+
+                      if (success) {
+                        Navigator.pop(context);
+                        loadData(); // Refresh UI profile
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text("Profil berhasil diperbarui!"),
+                              backgroundColor: Colors.green),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  "Gagal memperbarui profil. Email mungkin sudah dipakai."),
+                              backgroundColor: Colors.red),
+                        );
+                      }
+                    },
+              child: isUpdating
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text("Simpan", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showChangePasswordDialog() {
     final TextEditingController oldPasswordController = TextEditingController();
     final TextEditingController newPasswordController = TextEditingController();
@@ -71,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     showDialog(
       context: context,
-      barrierDismissible: false, // Tidak bisa ditutup dengan klik luar area
+      barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
           shape:
@@ -82,7 +460,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // --- 1. PASSWORD LAMA ---
                 TextField(
                   controller: oldPasswordController,
                   obscureText: obscureOld,
@@ -104,8 +481,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // --- 2. PASSWORD BARU ---
                 TextField(
                   controller: newPasswordController,
                   obscureText: obscureNew,
@@ -127,8 +502,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-
-                // --- 3. KONFIRMASI PASSWORD BARU ---
                 TextField(
                   controller: confirmPasswordController,
                   obscureText: obscureConfirm,
@@ -168,7 +541,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: isUpdating
                   ? null
                   : () async {
-                      // 💡 Validasi Input
                       if (oldPasswordController.text.isEmpty ||
                           newPasswordController.text.isEmpty ||
                           confirmPasswordController.text.isEmpty) {
@@ -198,11 +570,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       setStateDialog(() => isUpdating = true);
 
-                      // 💡 Panggil API
-                      bool success = await ProfileService.updatePassword(
-                          user!['name'],
-                          oldPasswordController.text,
-                          newPasswordController.text);
+                      bool success = await ProfileService.updateFullProfile(
+                          name: user!['name'],
+                          email: user!['email'],
+                          oldPassword: oldPasswordController.text,
+                          newPassword: newPasswordController.text);
 
                       setStateDialog(() => isUpdating = false);
 
@@ -214,7 +586,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               backgroundColor: Colors.green),
                         );
                       } else {
-                        // Jika false, kemungkinan besar password lama salah
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                               content: Text(
@@ -285,12 +656,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(
-          0xFFF5F7FA), // Latar belakang abu-abu sangat muda (modern)
+      backgroundColor: const Color(0xFFF5F7FA),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // --- HEADER SECTION (Lengkungan Biru di Atas) ---
+            // --- HEADER SECTION ---
             Container(
               width: double.infinity,
               padding: const EdgeInsets.only(
@@ -304,7 +674,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Column(
                 children: [
-                  // 💡 HAPUS ICON BACK & EDIT: Hanya Teks Saja
                   const Text(
                     "PROFIL SAYA",
                     style: TextStyle(
@@ -316,22 +685,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // Avatar Profil
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle),
-                    child: const CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person,
-                          size: 55, color: Color(0xFF3F51B5)),
-                    ),
+                  // Avatar Profil yang diperbarui (Menampilkan foto dari server jika ada)
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle),
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.white,
+                          backgroundImage: user!['avatar_url'] != null
+                              ? NetworkImage(user!['avatar_url'])
+                              : null,
+                          child: user!['avatar_url'] == null
+                              ? const Icon(Icons.person,
+                                  size: 55, color: Color(0xFF3F51B5))
+                              : null,
+                        ),
+                      ),
+                      // Tombol pensil kecil untuk edit profil cepat
+                      GestureDetector(
+                        onTap: _showEditProfileDialog,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.edit,
+                              color: Color(0xFF3F51B5), size: 16),
+                        ),
+                      )
+                    ],
                   ),
                   const SizedBox(height: 16),
 
-                  // Nama & Email
                   Text(
                     user!['name'] ?? 'Pengguna',
                     style: const TextStyle(
@@ -362,7 +753,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 💡 KARTU QUOTE OPTIK ALHAZEN
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -395,15 +785,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // 💡 KARTU BARU: PROMO & VOUCHER
+                  const Text("Dompet & Promo",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: _cardBorderRadius,
+                      boxShadow: _cardShadow,
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 0),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.local_offer_rounded,
+                            color: Colors.redAccent),
+                      ),
+                      title: const Text("Voucher Diskon",
+                          style: TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold)),
+                      subtitle: Text("Klaim dan gunakan promo menarik",
+                          style: TextStyle(
+                              fontSize: 13, color: Colors.grey.shade600)),
+                      trailing: const Icon(Icons.chevron_right_rounded,
+                          color: Colors.grey),
+                      // 💡 UBAH BAGIAN INI
+                      onTap: () {
+                        _showVouchersSheet();
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                  // 💡 KARTU MENU PENGATURAN (Telp & Password)
-                  // 💡 KARTU MENU PENGATURAN (Telp & Password)
+                  // Di bawah ini adalah "Pengaturan Akun" yang sudah ada...
                   const Text("Pengaturan Akun",
                       style:
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   Container(
-                    // 💡 PERBAIKAN: Tambahkan padding atas dan bawah di sini agar seimbang
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -412,8 +838,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     child: Column(
                       children: [
+                        // Tombol Edit Profil Dasar
                         ListTile(
-                          // 💡 vertical diubah jadi 0 agar patuh pada padding Container
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 0),
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(10)),
+                            child: const Icon(Icons.person,
+                                color: Color(0xFF3F51B5)),
+                          ),
+                          title: const Text("Edit Data Profil",
+                              style: TextStyle(
+                                  fontSize: 14, fontWeight: FontWeight.bold)),
+                          trailing: const Icon(Icons.chevron_right_rounded,
+                              color: Colors.grey),
+                          onTap: _showEditProfileDialog,
+                        ),
+
+                        Divider(
+                            height: 16,
+                            indent: 70,
+                            endIndent: 20,
+                            color: Colors.grey.shade200),
+
+                        ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 0),
                           leading: Container(
@@ -427,20 +878,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           title: const Text("Nomor Telepon",
                               style: TextStyle(
                                   fontSize: 14, fontWeight: FontWeight.bold)),
-                          subtitle: Text(_displayPhone,
+                          subtitle: Text(
+                              (user!['phone'] != null &&
+                                      user!['phone'].toString().isNotEmpty)
+                                  ? user!['phone']
+                                  : _displayPhone, // Gunakan dari alamat jika akun belum diatur
                               style: TextStyle(
                                   fontSize: 13, color: Colors.grey.shade600)),
                         ),
-
                         Divider(
                             height: 16,
                             indent: 70,
                             endIndent: 20,
-                            color: Colors.grey
-                                .shade200), // height divider sedikit dilebarkan
+                            color: Colors.grey.shade200),
 
                         ListTile(
-                          // 💡 vertical diubah jadi 0 agar patuh pada padding Container
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 0),
                           leading: Container(
@@ -462,8 +914,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 30),
-
-                  // 💡 DAFTAR ALAMAT
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -487,7 +937,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-
                   if (addresses.isEmpty)
                     Center(
                       child: Padding(
@@ -599,10 +1048,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       );
                     }).toList(),
-
                   const SizedBox(height: 30),
-
-                  // 💡 TOMBOL LOGOUT MERAH
                   SizedBox(
                     width: double.infinity,
                     height: 55,

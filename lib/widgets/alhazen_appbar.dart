@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 💡 Import SharedPreferences
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:optik_alhazen_app/screens/cart_screen.dart';
-// 💡 Sesuaikan import ini dengan lokasi file LoginScreen Anda:
+import '../services/cart_service.dart'; // Import CartService
+
+// Ganti import ini dengan lokasi LoginScreen Anda jika fungsi logout darurat diaktifkan
 // import 'package:optik_alhazen_app/screens/login_screen.dart';
 
-class AlhazenAppBar extends StatelessWidget implements PreferredSizeWidget {
+class AlhazenAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
   final bool showCart;
 
@@ -12,46 +14,85 @@ class AlhazenAppBar extends StatelessWidget implements PreferredSizeWidget {
       : super(key: key);
 
   @override
+  State<AlhazenAppBar> createState() => _AlhazenAppBarState();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class _AlhazenAppBarState extends State<AlhazenAppBar> {
+  int _cartItemCount = 0; // Variabel untuk menyimpan jumlah barang di keranjang
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.showCart) {
+      _fetchCartCount();
+    }
+  }
+
+  // 💡 FUNGSI: Mengambil jumlah barang di keranjang dari API
+  Future<void> _fetchCartCount() async {
+    try {
+      final carts = await CartService.getCartItems();
+      if (mounted) {
+        setState(() {
+          _cartItemCount = carts.length;
+        });
+      }
+    } catch (e) {
+      print("Error fetch cart count: $e");
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      title: Text(widget.title,
+          style: const TextStyle(fontWeight: FontWeight.bold)),
       backgroundColor: const Color(0xFF3F51B5),
       foregroundColor: Colors.white,
       elevation: 0,
       actions: [
         // --- TOMBOL CART ---
-        if (showCart)
+        if (widget.showCart)
           Padding(
             padding: const EdgeInsets.only(right: 5),
             child: IconButton(
-              icon: const Badge(
-                label: Text('!'), // Nanti bisa dihubungkan ke Stream/Provider
-                child: Icon(Icons.shopping_cart_outlined),
+              icon: Badge(
+                isLabelVisible: _cartItemCount > 0, // Hanya muncul jika > 0
+                label: Text(_cartItemCount.toString()),
+                child: const Icon(Icons.shopping_cart_outlined),
               ),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                // Tunggu sampai user kembali dari halaman keranjang
+                await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const CartScreen()),
                 );
+                // Refresh angka keranjang
+                _fetchCartCount();
               },
             ),
           ),
 
-        // --- 💡 TOMBOL LOGOUT DARURAT ---
-        // Padding(
-        //   padding: const EdgeInsets.only(right: 10),
-        //   child: IconButton(
-        //     tooltip: "Logout Darurat",
-        //     icon: const Icon(Icons.logout_rounded,
-        //         color: Colors.redAccent), // Warna merah agar mudah terlihat
-        //     onPressed: () => _showLogoutDialog(context),
-        //   ),
-        // ),
+        // --- TOMBOL LOGOUT DARURAT (Silakan di-uncomment jika ingin digunakan) ---
+        /*
+        Padding(
+          padding: const EdgeInsets.only(right: 10),
+          child: IconButton(
+            tooltip: "Logout Darurat",
+            icon: const Icon(Icons.logout_rounded,
+                color: Colors.redAccent), // Warna merah agar mudah terlihat
+            onPressed: () => _showLogoutDialog(context),
+          ),
+        ),
+        */
       ],
     );
   }
 
-  // 💡 FUNGSI LOGOUT (Menghapus data & kembali ke halaman Login)
+  // 💡 FUNGSI LOGOUT DARURAT (Menghapus data & kembali ke halaman Login)
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -82,7 +123,7 @@ class AlhazenAppBar extends StatelessWidget implements PreferredSizeWidget {
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      // 💡 GANTI "LoginScreen()" dengan nama class halaman login Anda
+                      // 💡 GANTI dengan nama class halaman login Anda
                       builder: (context) => const Scaffold(
                           body: Center(child: Text("Halaman Login"))),
                     ),
@@ -96,7 +137,4 @@ class AlhazenAppBar extends StatelessWidget implements PreferredSizeWidget {
       },
     );
   }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }

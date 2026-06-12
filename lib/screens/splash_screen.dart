@@ -4,7 +4,6 @@ import '../controllers/auth_controller.dart';
 import 'home_screen.dart';
 import 'login_screen.dart';
 
-
 class SplashScreen extends StatefulWidget {
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -44,7 +43,7 @@ class _SplashScreenState extends State<SplashScreen> {
         width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.blue, Colors.blue.shade900],
+            colors: [Colors.blue, const Color.fromRGBO(216, 199, 199, 1)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -53,8 +52,15 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.remove_red_eye, size: 80, color: Colors.white),
-              SizedBox(height: 20),
+              // --- BAGIAN YANG DIUBAH ---
+              // Memanggil gambar logo toko dari folder assets
+              Image.asset(
+                'assets/images/logo.png', // Pastikan nama file dan path-nya sesuai
+                width: 120, // Kamu bisa menyesuaikan ukuran lebarnya di sini
+                height: 120, // Kamu bisa menyesuaikan ukuran tingginya di sini
+              ),
+              // --------------------------
+              SizedBox(height: 5),
               Text(
                 "Optik Alhazen",
                 style: TextStyle(
@@ -64,7 +70,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               SizedBox(height: 20),
-              CircularProgressIndicator(color: Colors.white),
+              CircularProgressIndicator(
+                  color: const Color.fromARGB(255, 66, 0, 221)),
             ],
           ),
         ),

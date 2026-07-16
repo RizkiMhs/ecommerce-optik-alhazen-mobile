@@ -2,7 +2,7 @@
 
 class ApiConfig {
   // URL dasar API Anda
-  static const String baseUrl = 'http://10.103.92.133:8000/api';
+  static const String baseUrl = 'https://optikalhazen.my.id/api';
   // static const String baseUrl = 'http://127.0.0.1:8000/api';
 
   // Daftar endpoint API yang digunakan

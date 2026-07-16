@@ -3,6 +3,9 @@ import '../screens/home_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/order_screen.dart';
 import '../screens/consultation_chat_screen.dart'; // 💡 Import layar chat
+import '../colect/custumer_care_screen.dart'; // 💡 Import layar customer care
+import '../colect/faq_screen.dart'; // 💡 Import layar FAQ
+// import '../colect/customer_care_screen.dart'; // 💡 Import layar Customer Care
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -19,6 +22,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const OrderScreen(),
     const ConsultationChatScreen(), // 💡 Tambahkan halaman Konsultasi di index 2
     ProfileScreen(),
+    // 💡 Tambahkan halaman Customer Care di index 4
   ];
 
   @override
@@ -44,8 +48,10 @@ class _MainNavigationState extends State<MainNavigation> {
             children: [
               _navItem(Icons.home, "Beranda", 0),
               _navItem(Icons.receipt_long, "Pesanan", 1),
-              _navItem(Icons.chat_bubble_outline, "Konsultasi", 2), // 💡 Menu Baru
+              _navItem(
+                  Icons.chat_bubble_outline, "Konsultasi", 2), // 💡 Menu Baru
               _navItem(Icons.person, "Profil", 3), // 💡 Geser Profil ke index 3
+              // 💡 Menu Bantuan
             ],
           ),
         ),

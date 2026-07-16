@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:optik_alhazen_app/screens/cart_screen.dart';
 import '../services/cart_service.dart'; // Import CartService
+import 'package:optik_alhazen_app/screens/login_screen.dart'; // Import LoginScreen
+import '../colect/notif.dart'; // Import NotificationScreen
 
 // Ganti import ini dengan lokasi LoginScreen Anda jika fungsi logout darurat diaktifkan
 // import 'package:optik_alhazen_app/screens/login_screen.dart';
@@ -77,17 +79,33 @@ class _AlhazenAppBarState extends State<AlhazenAppBar> {
           ),
 
         // --- TOMBOL LOGOUT DARURAT (Silakan di-uncomment jika ingin digunakan) ---
-        /*
-        Padding(
-          padding: const EdgeInsets.only(right: 10),
-          child: IconButton(
-            tooltip: "Logout Darurat",
-            icon: const Icon(Icons.logout_rounded,
-                color: Colors.redAccent), // Warna merah agar mudah terlihat
-            onPressed: () => _showLogoutDialog(context),
-          ),
-        ),
-        */
+
+        // Padding(
+        //   padding: const EdgeInsets.only(right: 10),
+        //   child: IconButton(
+        //     tooltip: "Logout Darurat",
+        //     icon: const Icon(Icons.logout_rounded,
+        //         color: Colors.redAccent), // Warna merah agar mudah terlihat
+        //     onPressed: () => _showLogoutDialog(context),
+        //   ),
+        // ),
+
+        // Padding(
+        //   padding: const EdgeInsets.only(right: 5),
+        //   child: IconButton(
+        //     icon: const Badge(
+        //       label: Text('1'), // Angka notif dummy
+        //       isLabelVisible: true,
+        //       child: Icon(Icons.notifications_none_rounded),
+        //     ),
+        //     onPressed: () {
+        //       Navigator.push(
+        //         context,
+        //         MaterialPageRoute(builder: (context) => const NotificationScreen()),
+        //       );
+        //     },
+        //   ),
+        // ),
       ],
     );
   }
@@ -123,9 +141,8 @@ class _AlhazenAppBarState extends State<AlhazenAppBar> {
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      // 💡 GANTI dengan nama class halaman login Anda
-                      builder: (context) => const Scaffold(
-                          body: Center(child: Text("Halaman Login"))),
+                      builder: (context) =>
+                          LoginScreen(), // Pastikan LoginScreen sudah diimport
                     ),
                     (Route<dynamic> route) => false,
                   );

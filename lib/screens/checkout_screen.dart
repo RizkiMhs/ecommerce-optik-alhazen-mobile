@@ -64,60 +64,109 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       "desc": "Scan QR menggunakan aplikasi e-wallet atau m-banking"
     },
   ];
+
+  String selectedCourierCode = "jne";
+  String selectedCourierKey = "jne|reg";
+
+  final List<Map<String, String>> courierOptions = [
+    {
+      "code": "jne",
+      "label": "JNE",
+    },
+    {
+      "code": "jnt",
+      "label": "J&T Express",
+    },
+  ];
   @override
   void initState() {
     super.initState();
     fetchUserAddress();
   }
 
+  bool _isMainAddress(dynamic value) {
+    if (value is bool) return value;
+
+    if (value is num) {
+      return value == 1;
+    }
+
+    final normalized = value.toString().trim().toLowerCase();
+
+    return normalized == '1' || normalized == 'true';
+  }
+
   void fetchUserAddress() async {
     final addresses = await AddressService.getAddresses();
 
-    if (mounted) {
-      setState(() {
-        allAddresses = addresses; // 💡 SIMPAN SEMUA ALAMAT DI SINI
+    if (!mounted) return;
 
-        if (addresses.isNotEmpty) {
-          mainAddress = addresses.firstWhere(
-              (addr) => addr['is_main'] == 1 || addr['is_main'] == true,
-              orElse: () => addresses.first);
-        } else {
-          mainAddress = null;
-        }
-        isLoadingAddress = false;
-      });
+    setState(() {
+      allAddresses = addresses;
 
-      if (mainAddress != null) {
-        String cityId = mainAddress!['city_id'].toString();
-        fetchOngkir(cityId);
+      if (addresses.isNotEmpty) {
+        mainAddress = addresses.firstWhere(
+          (addr) => _isMainAddress(addr['is_main']),
+          orElse: () => addresses.first,
+        );
       } else {
-        setState(() => isLoadingShipping = false);
+        mainAddress = null;
       }
+
+      isLoadingAddress = false;
+    });
+
+    if (mainAddress != null) {
+      final cityId = mainAddress!['city_id'].toString();
+      fetchOngkir(cityId);
+    } else {
+      setState(() => isLoadingShipping = false);
     }
   }
 
   void fetchOngkir(String cityId) async {
     setState(() {
       isLoadingShipping = true;
+      ongkosKirim = 0;
+      namaKurir = "Menghitung ongkir...";
+      estimasiWaktu = "";
+      selectedCourierKey = "";
     });
 
-    final result = await OrderService.checkOngkir(cityId);
+    final result = await OrderService.checkOngkir(
+      cityId,
+      selectedCourierCode,
+    );
 
-    if (mounted) {
-      setState(() {
-        if (result != null && result['status'] == 'success') {
-          ongkosKirim = double.parse(result['shipping_cost'].toString());
+    if (!mounted) return;
 
-          namaKurir = result['courier'];
+    setState(() {
+      if (result != null && result['status'] == 'success') {
+        ongkosKirim = double.tryParse(
+              result['shipping_cost'].toString(),
+            ) ??
+            0;
 
-          estimasiWaktu = result['etd'] ?? "2-3";
-        } else {
-          namaKurir = "Gagal memuat ongkos kirim";
-          ongkosKirim = 0;
-        }
-        isLoadingShipping = false;
-      });
-    }
+        // Bisa membaca format backend lama maupun backend baru
+        namaKurir = (result['courier_label'] ??
+                result['courier'] ??
+                selectedCourierCode.toUpperCase())
+            .toString();
+
+        estimasiWaktu = (result['etd'] ?? "-").toString();
+
+        // Wajib agar JNE/J&T tersimpan dengan service-nya
+        selectedCourierKey =
+            (result['courier_key'] ?? "$selectedCourierCode|reg").toString();
+      } else {
+        ongkosKirim = 0;
+        namaKurir = "Kurir tidak tersedia";
+        estimasiWaktu = "";
+        selectedCourierKey = "";
+      }
+
+      isLoadingShipping = false;
+    });
   }
 
   void _showPaymentMethodSheet() {
@@ -700,6 +749,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           // const SizedBox(height: 8),
           _buildVoucherSection(subtotalProduk),
           const SizedBox(height: 8),
+          _buildCourierSection(),
+          const SizedBox(height: 8),
           _buildPaymentMethodSection(),
           const SizedBox(height: 8),
           _buildPaymentSummarySection(subtotalProduk),
@@ -1172,7 +1223,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF3F51B5))),
                         if (estimasiWaktu.isNotEmpty)
-                          Text("Estimasi tiba: $estimasiWaktu hari",
+                          Text("Estimasi tiba: $estimasiWaktu",
                               style: const TextStyle(
                                   fontSize: 12, color: Colors.grey)),
                       ],
@@ -1291,7 +1342,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
                         final result = await OrderService.submitOrder(
                           shippingCost: ongkosKirim,
-                          courier: "jne",
+                          courier: selectedCourierKey,
                           paymentMethod: selectedCode,
                           addressData: mainAddress!,
                           cartIds: selectedCartIds,
@@ -1363,6 +1414,256 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       decoration: BoxDecoration(
           color: Colors.blue[50], borderRadius: BorderRadius.circular(8)),
       child: const Icon(Icons.image_outlined, color: Color(0xFF3F51B5)),
+    );
+  }
+
+  Widget _buildCourierSection() {
+    final bool courierReady = !isLoadingShipping &&
+        namaKurir.isNotEmpty &&
+        namaKurir != "Kurir tidak tersedia" &&
+        namaKurir != "Menghitung ongkir...";
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.local_shipping_outlined,
+                color: Color(0xFF3F51B5),
+                size: 21,
+              ),
+              SizedBox(width: 8),
+              Text(
+                "Pilih Ekspedisi",
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: Color(0xFF202124),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            "Pilih kurir untuk pengiriman pesanan Anda",
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: courierOptions.map((courier) {
+              final bool isSelected = selectedCourierCode == courier['code'];
+
+              final bool isJne = courier['code'] == 'jne';
+
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: isJne ? 10 : 0,
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () {
+                      if (mainAddress == null) return;
+
+                      setState(() {
+                        selectedCourierCode = courier['code']!;
+                        selectedCourierKey = "";
+                        ongkosKirim = 0;
+                        namaKurir = "Menghitung ongkir...";
+                        estimasiWaktu = "";
+                        isLoadingShipping = true;
+                      });
+
+                      fetchOngkir(
+                        mainAddress!['city_id'].toString(),
+                      );
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 13,
+                      ),
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected ? const Color(0xFF3F51B5) : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFF3F51B5)
+                              : Colors.grey.shade300,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xFF3F51B5).withOpacity(0.20),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : [],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isSelected
+                                ? Icons.check_circle_rounded
+                                : Icons.local_shipping_outlined,
+                            size: 18,
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF3F51B5),
+                          ),
+                          const SizedBox(width: 7),
+                          Flexible(
+                            child: Text(
+                              courier['label']!,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: isSelected
+                                    ? Colors.white
+                                    : const Color(0xFF303030),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: double.infinity,
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: isLoadingShipping
+                  ? Colors.grey.shade50
+                  : courierReady
+                      ? const Color(0xFFF3F6FF)
+                      : const Color(0xFFFFF4F4),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isLoadingShipping
+                    ? Colors.grey.shade200
+                    : courierReady
+                        ? const Color(0xFFD5DFFF)
+                        : const Color(0xFFFFD4D4),
+              ),
+            ),
+            child: isLoadingShipping
+                ? const Row(
+                    children: [
+                      SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.2,
+                          color: Color(0xFF3F51B5),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Text(
+                        "Menghitung ongkir terbaik...",
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  )
+                : courierReady
+                    ? Row(
+                        children: [
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3F51B5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.inventory_2_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  namaKurir,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                    color: Color(0xFF202124),
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                if (estimasiWaktu.isNotEmpty)
+                                  Text(
+                                    "Estimasi tiba: $estimasiWaktu",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            formatRupiah(ongkosKirim),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF3F51B5),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: Colors.redAccent,
+                            size: 21,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              namaKurir.isEmpty
+                                  ? "Kurir belum tersedia untuk alamat ini"
+                                  : namaKurir,
+                              style: const TextStyle(
+                                color: Colors.redAccent,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+          ),
+        ],
+      ),
     );
   }
 }

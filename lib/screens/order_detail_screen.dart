@@ -289,6 +289,156 @@ class OrderDetailScreen extends StatelessWidget {
     );
   }
 
+  // 💡 FUNGSI MEMUNCULKAN POP-UP ULASAN
+  void _showReviewSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        // Variabel lokal untuk menyimpan state bintang dan teks
+        int _rating = 5;
+        TextEditingController _reviewController = TextEditingController();
+
+        // Menggunakan StatefulBuilder agar bintang bisa diklik & berubah warna di dalam pop-up
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom +
+                    20, // Agar tidak tertutup keyboard
+                left: 24,
+                right: 24,
+                top: 24,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Menyesuaikan tinggi otomatis
+                children: [
+                  const Text(
+                    "Bagaimana Pesanan Anda? 📦",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Bantu kami dan pembeli lain dengan memberikan ulasan untuk produk ini.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // --- BINTANG RATING INTERAKTIF ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        iconSize: 45,
+                        padding: EdgeInsets.zero,
+                        icon: Icon(
+                          index < _rating
+                              ? Icons.star_rounded
+                              : Icons.star_outline_rounded,
+                          color: Colors.amber,
+                        ),
+                        onPressed: () {
+                          setModalState(() {
+                            _rating = index + 1; // Ubah jumlah bintang
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _rating == 5
+                        ? "Sangat Bagus!"
+                        : _rating == 4
+                            ? "Bagus"
+                            : _rating == 3
+                                ? "Lumayan"
+                                : _rating == 2
+                                    ? "Kurang"
+                                    : "Sangat Buruk",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber.shade700),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- KOLOM KOMENTAR ---
+                  TextField(
+                    controller: _reviewController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText:
+                          "Tulis pengalamanmu menggunakan kacamata ini...",
+                      hintStyle:
+                          TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFF3F51B5)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // --- TOMBOL KIRIM ---
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3F51B5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        // Tutup Bottom Sheet
+                        Navigator.pop(context);
+
+                        // Tampilkan Notifikasi Sukses
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                "Terima kasih! Ulasan Anda berhasil dikirim. ❤️"),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        "Kirim Ulasan",
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final items = order['order_items'] as List<dynamic>? ?? [];
@@ -554,6 +704,30 @@ class OrderDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 30),
+
+            // if (order['status'] == 'completed') ...[
+            //     const SizedBox(height: 20),
+            //     SizedBox(
+            //       width: double.infinity,
+            //       height: 48,
+            //       child: OutlinedButton.icon(
+            //         style: OutlinedButton.styleFrom(
+            //           side: const BorderSide(color: Color(0xFF3F51B5), width: 1.5),
+            //           shape: RoundedRectangleBorder(
+            //             borderRadius: BorderRadius.circular(12),
+            //           ),
+            //         ),
+            //         icon: const Icon(Icons.star_rate_rounded, color: Colors.amber),
+            //         label: const Text(
+            //           "Beri Ulasan Produk",
+            //           style: TextStyle(color: Color(0xFF3F51B5), fontWeight: FontWeight.bold),
+            //         ),
+            //         onPressed: () {
+            //           _showReviewSheet(context); // Panggil fungsi pop-up ulasan
+            //         },
+            //       ),
+            //     ),
+            //   ],
           ],
         ),
       ),

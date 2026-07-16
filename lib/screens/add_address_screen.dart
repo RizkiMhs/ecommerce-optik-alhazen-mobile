@@ -44,7 +44,12 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       _selectedCityName =
           widget.data!['city_name'] ?? "Kota Terpilih (ID: $_selectedCityId)";
 
-      _isMain = widget.data!['is_main'] == 1;
+      final mainValue = widget.data!['is_main'];
+
+      _isMain = mainValue == true ||
+          mainValue == 1 ||
+          mainValue == '1' ||
+          mainValue.toString().toLowerCase() == 'true';
     }
   }
 
@@ -141,37 +146,49 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
 
                   // 💡 KOTAK PENCARIAN REAL-TIME
                   TextField(
-                    autofocus: true, // Keyboard otomatis muncul
+                    autofocus: true,
+                    textInputAction: TextInputAction.search,
                     decoration: InputDecoration(
-                      hintText: "Ketik minimal 3 huruf (misal: lhok)...",
+                      hintText: "Ketik minimal 3 huruf lalu tekan Search",
                       prefixIcon: const Icon(Icons.search),
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
-                    onChanged: (value) async {
-                      // Hanya mencari jika pengguna sudah mengetik minimal 3 huruf agar API tidak kelebihan beban
-                      if (value.length >= 3) {
-                        setModalState(() => isSearching = true);
+                    onSubmitted: (value) async {
+                      final query = value.trim();
 
-                        // Menembak API Laravel
-                        final results =
-                            await ProfileService.searchCities(value);
-
-                        print(
-                            "Jumlah data yang diterima UI: ${results.length} item");
+                      if (query.length < 3) {
                         setModalState(() {
-                          searchResults = results;
+                          searchResults = [];
                           isSearching = false;
                         });
-                      } else {
-                        setModalState(() {
-                          searchResults =
-                              []; // Kosongkan jika huruf kurang dari 3
-                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text("Masukkan minimal 3 huruf nama kota."),
+                          ),
+                        );
+                        return;
                       }
+
+                      FocusScope.of(context).unfocus();
+
+                      setModalState(() {
+                        isSearching = true;
+                        searchResults = [];
+                      });
+
+                      final results = await ProfileService.searchCities(query);
+
+                      setModalState(() {
+                        searchResults = results;
+                        isSearching = false;
+                      });
                     },
                   ),
                   const SizedBox(height: 16),
@@ -313,14 +330,17 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                           _selectedCityName ?? "Pilih Kota Anda",
                           style: TextStyle(
                             fontSize: 15,
-                            color: _selectedCityName != null ? Colors.grey[900] : Colors.grey[500],
+                            color: _selectedCityName != null
+                                ? Colors.grey[900]
+                                : Colors.grey[500],
                           ),
                           // 💡 PERBAIKAN: Tambahkan batas baris dan efek titik-titik
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8), // Beri sedikit jarak dengan ikon
+                      const SizedBox(
+                          width: 8), // Beri sedikit jarak dengan ikon
                       const Icon(Icons.arrow_drop_down, color: Colors.grey),
                     ],
                   ),

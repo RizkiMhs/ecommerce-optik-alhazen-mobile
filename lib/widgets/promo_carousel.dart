@@ -13,9 +13,8 @@ class _PromoCarouselState extends State<PromoCarousel> {
 
   final List<Map<String, dynamic>> promoData = [
     {
-      "tag": "PROMO SPESIAL",
-      "title": "Diskon Kacamata\nHingga 50%",
-      // 💡 PERBAIKAN: Pastikan path ini SAMA PERSIS dengan letak gambar Anda
+      "tag": "HEMAT SETIAP HARI",
+      "title": "Klaim Voucher\n& Promo Eksklusif",
       "image": "assets/images/banner1.jpg",
       "tagColor": Colors.orange,
     },
@@ -32,7 +31,7 @@ class _PromoCarouselState extends State<PromoCarousel> {
       // 💡 PERBAIKAN PATH GAMBAR
       "image": "assets/images/banner3.jpg",
       "tagColor": Colors.amber,
-    }
+    },
   ];
 
   @override

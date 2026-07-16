@@ -80,13 +80,15 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text("Kirim Foto", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text("Kirim Foto",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -112,7 +114,10 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
       onTap: onTap,
       child: Column(
         children: [
-          CircleAvatar(radius: 30, backgroundColor: const Color(0xFFE8EAF6), child: Icon(icon, color: const Color(0xFF3F51B5), size: 30)),
+          CircleAvatar(
+              radius: 30,
+              backgroundColor: const Color(0xFFE8EAF6),
+              child: Icon(icon, color: const Color(0xFF3F51B5), size: 30)),
           const SizedBox(height: 8),
           Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
@@ -127,21 +132,28 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
     // Jangan lakukan apa-apa jika teks kosong dan gambar tidak ada
     if (text.isEmpty && imageFile == null) return;
 
-    setState(() { isSending = true; });
+    setState(() {
+      isSending = true;
+    });
 
     _messageController.clear();
     _scrollToBottom();
 
-    bool success = await ConsultationService.sendMessage(text, imageFile: imageFile);
+    bool success =
+        await ConsultationService.sendMessage(text, imageFile: imageFile);
 
-    setState(() { isSending = false; });
+    setState(() {
+      isSending = false;
+    });
 
     if (success) {
       _fetchMessages();
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal mengirim pesan.'), backgroundColor: Colors.red),
+          const SnackBar(
+              content: Text('Gagal mengirim pesan.'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -204,8 +216,13 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Optician Alhazen", style: TextStyle(color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold)),
-                Text("Konsultasi Online", style: TextStyle(color: Colors.green, fontSize: 12)),
+                Text("Optician Alhazen",
+                    style: TextStyle(
+                        color: Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
+                Text("Konsultasi Online",
+                    style: TextStyle(color: Colors.green, fontSize: 12)),
               ],
             ),
           ],
@@ -215,35 +232,47 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
         children: [
           Expanded(
             child: isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF3F51B5)))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF3F51B5)))
                 : messages.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[300]),
+                            Icon(Icons.chat_bubble_outline,
+                                size: 80, color: Colors.grey[300]),
                             const SizedBox(height: 16),
-                            Text("Belum ada pesan.\nKirim keluhan mata Anda sekarang!",
+                            Text(
+                                "Belum ada pesan.\nKirim keluhan mata Anda sekarang!",
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey[500], height: 1.5)),
+                                style: TextStyle(
+                                    color: Colors.grey[500], height: 1.5)),
                           ],
                         ),
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 20),
+                        padding: const EdgeInsets.only(
+                            left: 16, right: 16, top: 16, bottom: 20),
                         itemCount: messages.length,
                         itemBuilder: (context, index) {
                           final msg = messages[index];
-                          final isAdmin = msg['is_admin'] == true || msg['is_admin'] == 1;
+                          final isAdminValue = msg['is_admin'];
+
+                          final isAdmin = isAdminValue == true ||
+                              isAdminValue == 1 ||
+                              isAdminValue == '1' ||
+                              isAdminValue.toString().toLowerCase() == 'true';
                           final time = _formatTime(msg['created_at']);
 
                           // 💡 Parsing image url
-                          final String? imageUrl = msg['image'] != null && msg['image'].toString().isNotEmpty
+                          final String? imageUrl = msg['image'] != null &&
+                                  msg['image'].toString().isNotEmpty
                               ? msg['image']
                               : null;
 
-                          return _buildChatBubble(msg['message'], imageUrl, isAdmin, time);
+                          return _buildChatBubble(
+                              msg['message'], imageUrl, isAdmin, time);
                         },
                       ),
           ),
@@ -254,7 +283,10 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
-                BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -2))
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2))
               ],
             ),
             child: SafeArea(
@@ -263,7 +295,8 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                   // 💡 Tombol Attachment (Penjepit Kertas)
                   IconButton(
                     icon: const Icon(Icons.attach_file, color: Colors.grey),
-                    onPressed: _showImageSourceDialog, // Membuka pilihan Kamera/Galeri
+                    onPressed:
+                        _showImageSourceDialog, // Membuka pilihan Kamera/Galeri
                   ),
 
                   Expanded(
@@ -289,12 +322,18 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isSending ? Colors.grey : const Color(0xFF3F51B5),
+                        color:
+                            isSending ? Colors.grey : const Color(0xFF3F51B5),
                         shape: BoxShape.circle,
                       ),
                       child: isSending
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : const Icon(Icons.send_rounded,
+                              color: Colors.white, size: 20),
                     ),
                   ),
                 ],
@@ -307,7 +346,8 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
   }
 
   // --- 💡 UPDATE DESAIN BALON CHAT (MENAMPILKAN GAMBAR) ---
-  Widget _buildChatBubble(String? message, String? imageUrl, bool isAdmin, String time) {
+  Widget _buildChatBubble(
+      String? message, String? imageUrl, bool isAdmin, String time) {
     return Align(
       alignment: isAdmin ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
@@ -325,17 +365,21 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
             bottomRight: Radius.circular(isAdmin ? 16 : 0),
           ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+            BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 2))
           ],
         ),
         child: Column(
-          crossAxisAlignment: isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+          crossAxisAlignment:
+              isAdmin ? CrossAxisAlignment.start : CrossAxisAlignment.end,
           children: [
-
             // 💡 1. Tampilkan Gambar Jika Ada
             if (imageUrl != null)
               Padding(
-                padding: EdgeInsets.only(bottom: (message != null && message.isNotEmpty) ? 8.0 : 0),
+                padding: EdgeInsets.only(
+                    bottom: (message != null && message.isNotEmpty) ? 8.0 : 0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
@@ -354,7 +398,9 @@ class _ConsultationChatScreenState extends State<ConsultationChatScreen> {
                     errorBuilder: (context, error, stackTrace) => Container(
                       height: 150,
                       color: Colors.red[100],
-                      child: const Center(child: Icon(Icons.broken_image, color: Colors.red, size: 40)),
+                      child: const Center(
+                          child: Icon(Icons.broken_image,
+                              color: Colors.red, size: 40)),
                     ),
                   ),
                 ),

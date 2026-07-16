@@ -9,6 +9,7 @@ import '../services/profile_service.dart';
 import 'package:flutter/services.dart'; // Untuk fitur copy kode voucher
 import 'package:intl/intl.dart'; // Untuk format Rupiah
 import '../services/voucher_service.dart'; // Memanggil API Voucher
+import '../colect/faq_screen.dart'; // Sesuaikan path-nya
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -910,6 +911,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               color: Colors.grey),
                           onTap: _showChangePasswordDialog,
                         ),
+
+                        // Divider(
+                        //     height: 16,
+                        //     indent: 70,
+                        //     endIndent: 20,
+                        //     color: Colors.grey.shade200),
+
+                        // ListTile(
+                        //   onTap: () {
+                        //     Navigator.push(
+                        //       context,
+                        //       MaterialPageRoute(
+                        //           builder: (context) => const FaqScreen()),
+                        //     );
+                        //   },
+                        //   leading: Container(
+                        //     padding: const EdgeInsets.all(8),
+                        //     decoration: BoxDecoration(
+                        //       color: Colors.blue.shade50,
+                        //       borderRadius: BorderRadius.circular(8),
+                        //     ),
+                        //     child: const Icon(Icons.help_outline_rounded,
+                        //         color: Colors.blue),
+                        //   ),
+                        //   title: const Text("Pusat Bantuan (FAQ)",
+                        //       style: TextStyle(fontWeight: FontWeight.w600)),
+                        //   trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                        //       size: 16, color: Colors.grey),
+                        // ),
                       ],
                     ),
                   ),
@@ -947,7 +977,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     )
                   else
                     ...addresses.map((a) {
-                      bool isMain = a['is_main'] == 1;
+                      final mainValue = a['is_main'];
+
+                      final bool isMain = mainValue == true ||
+                          mainValue == 1 ||
+                          mainValue == '1' ||
+                          mainValue.toString().toLowerCase() == 'true';
                       String rawLabel = a['label'] ?? 'Alamat';
                       String formattedLabel = rawLabel.isNotEmpty
                           ? '${rawLabel[0].toUpperCase()}${rawLabel.substring(1).toLowerCase()}'

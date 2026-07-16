@@ -5,39 +5,76 @@ import '../config/api_config.dart';
 
 class OrderService {
   // --- Fungsi Cek Ongkir ---
+  // static Future<Map<String, dynamic>?> checkOngkir(
+  //     String destinationCityId) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString('access_token');
+
+  //   try {
+  //     final res = await http.post(
+  //       Uri.parse("${ApiConfig.baseUrl}/ongkir"),
+  //       headers: {
+  //         'Accept': 'application/json',
+  //         'Authorization': 'Bearer $token',
+  //       },
+  //       body: {
+  //         'destination_city_id': destinationCityId,
+  //         // 'destination_city_id': cityId,
+  //       },
+  //     );
+
+  //     // 💡 TAMBAHKAN 3 BARIS INI UNTUK DEBUGGING
+  //     print("=== DEBUG ONGKIR ===");
+  //     print("Status Code: ${res.statusCode}");
+  //     print("Body Balasan: ${res.body}");
+  //     print("====================");
+
+  //     if (res.statusCode == 200) {
+  //       return jsonDecode(res.body);
+  //     }
+  //     return null;
+  //   } catch (e) {
+  //     print("Error saat mengambil ongkir: $e");
+  //     return null;
+  //   }
+  // }
+
+
   static Future<Map<String, dynamic>?> checkOngkir(
-      String destinationCityId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token');
+  String destinationCityId,
+  String courierCode,
+) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
 
-    try {
-      final res = await http.post(
-        Uri.parse("${ApiConfig.baseUrl}/ongkir"),
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: {
-          'destination_city_id': destinationCityId,
-          // 'destination_city_id': cityId,
-        },
-      );
+  try {
+    final res = await http.post(
+      Uri.parse("${ApiConfig.baseUrl}/ongkir"),
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: {
+        'destination_city_id': destinationCityId,
+        'courier': courierCode,
+      },
+    );
 
-      // 💡 TAMBAHKAN 3 BARIS INI UNTUK DEBUGGING
-      print("=== DEBUG ONGKIR ===");
-      print("Status Code: ${res.statusCode}");
-      print("Body Balasan: ${res.body}");
-      print("====================");
+    print("=== DEBUG ONGKIR ===");
+    print("Status Code: ${res.statusCode}");
+    print("Body Balasan: ${res.body}");
+    print("====================");
 
-      if (res.statusCode == 200) {
-        return jsonDecode(res.body);
-      }
-      return null;
-    } catch (e) {
-      print("Error saat mengambil ongkir: $e");
-      return null;
+    if (res.statusCode == 200) {
+      return jsonDecode(res.body);
     }
+
+    return null;
+  } catch (e) {
+    print("Error saat mengambil ongkir: $e");
+    return null;
   }
+}
 
   static Future<Map<String, dynamic>> submitOrder({
   required double shippingCost,

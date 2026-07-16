@@ -10,6 +10,8 @@ import 'package:optik_alhazen_app/config/api_config.dart';
 import 'package:optik_alhazen_app/screens/cart_screen.dart';
 import 'package:optik_alhazen_app/services/lens_service.dart';
 import 'package:optik_alhazen_app/services/cart_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map product;
@@ -46,6 +48,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   // STATE UNTUK LOADING TOMBOL KERANJANG
   bool _isLoading = false;
+  bool _isFavorite = false;
 
   @override
   void dispose() {
@@ -66,6 +69,52 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     super.initState();
     loadLensOptions();
     _fetchCartCount(); // Ambil jumlah item di keranjang saat halaman dibuka
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    // Ambil daftar ID favorit yang tersimpan (jika tidak ada, buat list kosong)
+    List<String> favorites = prefs.getStringList('wishlist') ?? [];
+
+    // Cek apakah ID produk ini ada di dalam list favorit
+    final productId = widget.product['id'].toString();
+    if (mounted) {
+      setState(() {
+        _isFavorite = favorites.contains(productId);
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> favorites = prefs.getStringList('wishlist') ?? [];
+    final productId = widget.product['id'].toString();
+
+    setState(() {
+      if (_isFavorite) {
+        favorites.remove(productId);
+        _isFavorite = false;
+      } else {
+        favorites.add(productId);
+        _isFavorite = true;
+      }
+    });
+
+    // Simpan kembali ke penyimpanan lokal
+    await prefs.setStringList('wishlist', favorites);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isFavorite
+              ? '❤️ Ditambahkan ke Favorit'
+              : '💔 Dihapus dari Favorit'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: _isFavorite ? Colors.pink : Colors.grey,
+        ),
+      );
+    }
   }
 
   // 💡 FUNGSI MENGAMBIL JUMLAH KERANJANG
@@ -434,6 +483,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ),
           ),
+
+          // Padding(
+          //   padding: const EdgeInsets.only(right: 8.0, top: 8, bottom: 8),
+          //   child: Container(
+          //     decoration: BoxDecoration(
+          //       color: Colors.pink.shade50,
+          //       shape: BoxShape.circle,
+          //     ),
+          //     child: IconButton(
+          //       icon: Icon(
+          //         _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+          //         size: 20,
+          //         color: _isFavorite ? Colors.pink : Colors.pink.shade200,
+          //       ),
+          //       onPressed: _toggleFavorite,
+          //     ),
+          //   ),
+          // ),
+
+          // Padding(
+          //   padding: const EdgeInsets.only(right: 8.0, top: 8, bottom: 8),
+          //   child: Container(
+          //     decoration: BoxDecoration(
+          //       color: Colors.blue.shade50,
+          //       shape: BoxShape.circle,
+          //     ),
+          //     child: IconButton(
+          //       icon: const Icon(Icons.share_rounded, size: 20, color: Colors.blue),
+          //       onPressed: () {
+          //         final namaProduk = widget.product['name'] ?? 'Kacamata';
+          //         Share.share('Beli $namaProduk di Optik Alhazen sekarang! Kualitas terbaik.');
+          //       },
+          //     ),
+          //   ),
+          // ),
         ],
       ),
 
@@ -607,6 +691,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
+
+                  // const SizedBox(height: 8),
+                  // Row(
+                  //   children: [
+                  //     const Icon(Icons.star_rounded,
+                  //         color: Colors.amber, size: 18),
+                  //     const SizedBox(width: 4),
+                  //     const Text(
+                  //       "4.8",
+                  //       style: TextStyle(
+                  //           fontWeight: FontWeight.bold, fontSize: 14),
+                  //     ),
+                  //     const SizedBox(width: 8),
+                  //     Text(
+                  //       "(124 Ulasan)",
+                  //       style: TextStyle(
+                  //           color: Colors.grey.shade600, fontSize: 13),
+                  //     ),
+                  //     const SizedBox(width: 12),
+                  //     Container(
+                  //         width: 1, height: 12, color: Colors.grey.shade400),
+                  //     const SizedBox(width: 12),
+                  //     Text(
+                  //       "350+ Terjual",
+                  //       style: TextStyle(
+                  //           color: Colors.grey.shade600, fontSize: 13),
+                  //     ),
+                  //   ],
+                  // ),
                 ],
               ),
             ),

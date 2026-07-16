@@ -199,6 +199,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         setState(() => activeCategory = "Aksesoris");
                         _runFilter();
                       }),
+                  // CategoryItem(
+                  //     label: "Anak",
+                  //     icon: Icons.watch_outlined,
+                  //     isActive: activeCategory == "Anak",
+                  //     onTap: () {
+                  //       setState(() => activeCategory = "Anak");
+                  //       _runFilter();
+                  //     }),
                 ],
               ),
             ),

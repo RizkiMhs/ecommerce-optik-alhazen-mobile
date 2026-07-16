@@ -16,6 +16,17 @@ class _CartScreenState extends State<CartScreen> {
   List<dynamic> cartItems = [];
   bool isLoading = true;
 
+  int asInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  double asDouble(dynamic value) {
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
   Set<int> selectedItemIds = {};
 
   @override
@@ -26,20 +37,53 @@ class _CartScreenState extends State<CartScreen> {
 
   void fetchCart() async {
     final data = await CartService.getCartItems();
+
+    if (!mounted) return;
+
     setState(() {
-      cartItems = data;
+      cartItems = data.map((raw) {
+        final item = Map<String, dynamic>.from(raw as Map);
+
+        item['id'] = asInt(item['id']);
+        item['qty'] = asInt(item['qty']);
+
+        return item;
+      }).toList();
+
       isLoading = false;
     });
   }
 
-  void changeQty(int index, int delta) {
+  void changeQty(int index, int delta) async {
+    final oldQty = asInt(cartItems[index]['qty']);
+    final newQty = oldQty + delta;
+
+    if (newQty < 1) {
+      return;
+    }
+
     setState(() {
-      int newQty = cartItems[index]['qty'] + delta;
-      if (newQty > 0) {
-        cartItems[index]['qty'] = newQty;
-        CartService.updateQty(cartItems[index]['id'], newQty);
-      }
+      cartItems[index]['qty'] = newQty;
     });
+
+    try {
+      await CartService.updateQty(
+        asInt(cartItems[index]['id']),
+        newQty,
+      );
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        cartItems[index]['qty'] = oldQty;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal memperbarui jumlah barang.'),
+        ),
+      );
+    }
   }
 
   void removeItem(int index) async {
@@ -88,7 +132,9 @@ class _CartScreenState extends State<CartScreen> {
       double base = double.parse(item['product']['base_price'].toString());
       double lens = double.parse(
           (item['lens_type']?['additional_price'] ?? 0).toString());
-      return sum + ((base + lens) * item['qty']);
+      final qty = asInt(item['qty']);
+
+      return sum + ((base + lens) * qty);
     });
 
     return Scaffold(

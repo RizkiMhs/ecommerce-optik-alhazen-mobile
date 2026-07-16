@@ -724,12 +724,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // double subtotalProduk = widget.selectedItems.fold(0, (sum, item) {
+    //   double base = double.parse(item['product']['base_price'].toString());
+    //   double lens = double.parse(
+    //       (item['lens_type']?['additional_price'] ?? 0).toString());
+    //   return sum + ((base + lens) * item['qty']);
+    // });
+
+    // // 💡 UPDATE: Grand Total sekarang dikurangi diskon
+    // double grandTotal = (subtotalProduk - discountAmount) + ongkosKirim;
+    // if (grandTotal < 0) grandTotal = 0; // Jaga-jaga agar tidak minus
+
     double subtotalProduk = widget.selectedItems.fold(0, (sum, item) {
-      double base = double.parse(item['product']['base_price'].toString());
-      double lens = double.parse(
-          (item['lens_type']?['additional_price'] ?? 0).toString());
-      return sum + ((base + lens) * item['qty']);
+      double base = double.tryParse(item['product']['base_price'].toString()) ?? 0;
+      double lens = double.tryParse((item['lens_type']?['additional_price'] ?? 0).toString()) ?? 0;
+      
+      // 👈 INI KUNCI UTAMANYA: Paksa item['qty'] menjadi angka
+      int qty = int.tryParse(item['qty'].toString()) ?? 1; 
+
+      return sum + ((base + lens) * qty);
     });
+    // ========================================================
 
     // 💡 UPDATE: Grand Total sekarang dikurangi diskon
     double grandTotal = (subtotalProduk - discountAmount) + ongkosKirim;

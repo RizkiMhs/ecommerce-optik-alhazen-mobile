@@ -490,7 +490,7 @@
 // }
 
 
-
+// belanja langsung
 
 // bottomSheet: Container(
 //         padding: const EdgeInsets.only(
@@ -660,3 +660,113 @@
 //           ],
 //         ),
 //       ),
+
+
+
+
+
+
+            // =======================================================
+            // 🚨 AMUNISI RAHASIA: PETA SUNGGUHAN (FLUTTER_MAP)
+            // =======================================================
+            // const Text(
+            //   "Pin Lokasi Peta (Opsional)",
+            //   style: TextStyle(
+            //       fontSize: 14,
+            //       fontWeight: FontWeight.bold,
+            //       color: Colors.black87),
+            // ),
+            // const SizedBox(height: 8),
+            // Container(
+            //   height: 220,
+            //   margin: const EdgeInsets.only(bottom: 16),
+            //   decoration: BoxDecoration(
+            //     borderRadius: BorderRadius.circular(12),
+            //     border: Border.all(color: Colors.grey[300]!),
+            //     color: Colors.grey[200],
+            //   ),
+            //   child: ClipRRect(
+            //     borderRadius: BorderRadius.circular(12),
+            //     child: Stack(
+            //       alignment: Alignment.center,
+            //       children: [
+            //         // 1. PETA SUNGGUHAN (OPENSTREETMAP)
+            //         FlutterMap(
+            //           options: MapOptions(
+            //             // Titik kordinat awal (Misal: Monas, Jakarta)
+            //             // Ganti initialCenter menjadi center
+            //             center: LatLng(5.548290, 95.323753),
+
+            //             // Ganti initialZoom menjadi zoom
+            //             zoom: 15.0, // Tingkat zoom awal
+            //           ),
+            //           children: [
+            //             TileLayer(
+            //               // Ini adalah sumber peta gratis tanpa API Key
+            //               urlTemplate:
+            //                   'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            //               userAgentPackageName: 'com.optikalhazen.app',
+            //             ),
+            //           ],
+            //         ),
+
+            //         // 2. IKON PIN MERAH (TETAP DIAM DI TENGAH LAYAR)
+            //         const Column(
+            //           mainAxisAlignment: MainAxisAlignment.center,
+            //           children: [
+            //             Icon(Icons.location_on, color: Colors.red, size: 45),
+            //             SizedBox(
+            //                 height: 35), // Menggeser ujung pin ke titik tengah
+            //           ],
+            //         ),
+
+            //         // 3. TOMBOL KONFIRMASI (MENGAMBANG DI BAWAH)
+            //         Positioned(
+            //           bottom: 12,
+            //           child: ElevatedButton.icon(
+            //             onPressed: () {
+            //               // Munculkan loading pura-pura
+            //               showDialog(
+            //                 context: context,
+            //                 barrierDismissible: false,
+            //                 builder: (context) => const Center(
+            //                   child: CircularProgressIndicator(
+            //                       color: Colors.blueAccent),
+            //                 ),
+            //               );
+
+            //               // Tutup loading dan beri notifikasi sukses
+            //               Future.delayed(const Duration(seconds: 1), () {
+            //                 Navigator.pop(context);
+            //                 ScaffoldMessenger.of(context).showSnackBar(
+            //                   const SnackBar(
+            //                     content: Text(
+            //                         "Titik koordinat berhasil disematkan!"),
+            //                     backgroundColor: Colors.green,
+            //                   ),
+            //                 );
+            //               });
+            //             },
+            //             style: ElevatedButton.styleFrom(
+            //               backgroundColor: Colors.blue[800],
+            //               foregroundColor: Colors.white,
+            //               shape: RoundedRectangleBorder(
+            //                 borderRadius: BorderRadius.circular(20),
+            //               ),
+            //               elevation: 3,
+            //               padding: const EdgeInsets.symmetric(
+            //                   horizontal: 20, vertical: 10),
+            //             ),
+            //             icon: const Icon(Icons.check_circle_outline, size: 18),
+            //             label: const Text(
+            //               "Pilih Lokasi Ini",
+            //               style: TextStyle(
+            //                   fontSize: 13, fontWeight: FontWeight.bold),
+            //             ),
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
+            // =======================================================           // =======================================================

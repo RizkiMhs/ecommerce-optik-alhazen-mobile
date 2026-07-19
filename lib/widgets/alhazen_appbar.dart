@@ -4,6 +4,7 @@ import 'package:optik_alhazen_app/screens/cart_screen.dart';
 import '../services/cart_service.dart'; // Import CartService
 import 'package:optik_alhazen_app/screens/login_screen.dart'; // Import LoginScreen
 import '../colect/notif.dart'; // Import NotificationScreen
+import '../screens/wl.dart'; // Import WishlistScreen
 
 // Ganti import ini dengan lokasi LoginScreen Anda jika fungsi logout darurat diaktifkan
 // import 'package:optik_alhazen_app/screens/login_screen.dart';
@@ -105,6 +106,17 @@ class _AlhazenAppBarState extends State<AlhazenAppBar> {
         //       );
         //     },
         //   ),
+        // ),
+
+        // IconButton(
+        //   icon: const Icon(Icons.favorite_border_rounded,
+        //       color: Color.fromARGB(255, 253, 253, 253)),
+        //   onPressed: () {
+        //     Navigator.push(
+        //       context,
+        //       MaterialPageRoute(builder: (context) => const WishlistScreen()),
+        //     );
+        //   },
         // ),
       ],
     );
